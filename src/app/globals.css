@@ -260,3 +260,42 @@
 .breadcrumb-trail-item:nth-child(4) { animation-delay: 0.15s; }
 .breadcrumb-trail-item:nth-child(5) { animation-delay: 0.2s; }
 .breadcrumb-trail-item:nth-child(6) { animation-delay: 0.25s; }
+
+/* SkeletonLoader – shimmer / shine effect */
+.skeleton-loader-shine {
+  display: block;
+  background:
+    linear-gradient(
+      to right,
+      rgba(255, 255, 255, 0),
+      rgba(255, 255, 255, 0.5) 50%,
+      rgba(255, 255, 255, 0) 80%
+    ),
+    lightgray;
+  background-repeat: repeat-y;
+  background-size: 50px 500px;
+  background-position: 0 0;
+  animation: skeleton-shine var(--skeleton-duration, 1s) infinite;
+}
+@keyframes skeleton-shine {
+  to {
+    background-position: 100% 0;
+  }
+}
+/* Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-loader-shine {
+    animation: none;
+  }
+}
+/* Dark-mode adjustment: use subtler highlight and darker base */
+.dark .skeleton-loader-shine {
+  background:
+    linear-gradient(
+      to right,
+      rgba(255, 255, 255, 0),
+      rgba(255, 255, 255, 0.08) 50%,
+      rgba(255, 255, 255, 0) 80%
+    ),
+    oklch(0.25 0 0);
+}
