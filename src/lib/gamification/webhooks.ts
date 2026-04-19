@@ -5,6 +5,15 @@ import { db } from '@/lib/db';
  * and exponential backoff retry logic.
  */
 
+/** Retry delays in ms: 1 minute, 5 minutes, 30 minutes, 2 hours, 12 hours */
+const RETRY_DELAYS_MS = [
+  1 * 60 * 1000,      // 1 minute
+  5 * 60 * 1000,      // 5 minutes
+  30 * 60 * 1000,     // 30 minutes
+  2 * 60 * 60 * 1000, // 2 hours
+  12 * 60 * 60 * 1000, // 12 hours
+] as const;
+
 /**
  * Compute HMAC-SHA256 signature for a payload.
  * Uses Web Crypto API (available in Node.js 18+ and Edge Runtime).
@@ -110,7 +119,7 @@ async function attemptDelivery(
 
     if (!delivery) return;
 
-    const retryDelaysMs = [60000, 300000, 1800000, 7200000, 43200000]; // 1m, 5m, 30m, 2h, 12h
+    const retryDelaysMs = RETRY_DELAYS_MS;
     const nextRetryIndex = delivery.retryCount;
 
     if (nextRetryIndex < retryDelaysMs.length) {

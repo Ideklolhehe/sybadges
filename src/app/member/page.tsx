@@ -113,7 +113,7 @@ export default function MemberHome() {
 
   const currentLevel = levelConfig[stats.level as keyof typeof levelConfig] || levelConfig.bronze
   const xpData = points[0]
-  const bestStreak = streaks.reduce((best, s) => (s.currentLength > (best?.currentLength ?? 0) ? s : best), streaks[0])
+  const bestStreak = streaks.length > 0 ? streaks.reduce((best, s) => (s.currentLength > (best?.currentLength ?? 0) ? s : best), streaks[0]) : null
 
   const quickActions = [
     {
@@ -191,7 +191,7 @@ export default function MemberHome() {
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{
-                    width: `${Math.min(((xpData.totalPoints - (xpData.nextLevel.threshold - xpData.nextLevel.pointsNeeded - xpData.nextLevel.pointsNeeded)) / xpData.nextLevel.threshold) * 100, 100)}%`
+                    width: `${Math.min(((xpData.totalPoints - (xpData.nextLevel.threshold - xpData.nextLevel.pointsNeeded)) / xpData.nextLevel.pointsNeeded) * 100, 100)}%`
                   }}
                   transition={{ duration: 1, delay: 0.5 }}
                   className="h-3 bg-yellow-400 rounded-full"

@@ -190,9 +190,9 @@ export async function processStreaks(
 
       updatedStreakIds.push(streak.id);
 
-      const eventType = newLength === 1 ? 'streak.started' : 'streak.extended';
+      const streakEventType: 'streak.started' | 'streak.extended' = newLength === 1 ? 'streak.started' : 'streak.extended';
       await recordEvent({
-        eventType: eventType as 'streak.started' | 'streak.extended',
+        eventType: streakEventType,
         memberId,
         payload: {
           streakId: streak.id,
