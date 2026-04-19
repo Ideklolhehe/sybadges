@@ -14,6 +14,11 @@ const RETRY_DELAYS_MS = [
   12 * 60 * 60 * 1000, // 12 hours
 ] as const;
 
+const MAX_RETRIES = RETRY_DELAYS_MS.length;
+
+/** Delivery timeout per webhook (5 seconds) */
+const DELIVERY_TIMEOUT_MS = 5000;
+
 /**
  * Compute HMAC-SHA256 signature for a payload.
  * Uses Web Crypto API (available in Node.js 18+ and Edge Runtime).
@@ -38,6 +43,7 @@ async function computeSignature(payload: string, secret: string): Promise<string
 
 /**
  * Dispatch an event to all matching webhooks.
+ * Uses Promise.allSettled with per-webhook timeout to avoid blocking.
  */
 export async function dispatchWebhookEvent(
   eventType: string,
@@ -47,7 +53,7 @@ export async function dispatchWebhookEvent(
     where: { isActive: true },
   });
 
-  for (const webhook of webhooks) {
+  const deliveryPromises = webhooks.map(async (webhook) => {
     // Check if webhook subscribes to this event type
     let events: string[] = [];
     try {
@@ -56,7 +62,7 @@ export async function dispatchWebhookEvent(
       events = [];
     }
 
-    if (events.length > 0 && !events.includes(eventType)) continue;
+    if (events.length > 0 && !events.includes(eventType)) return;
 
     const payloadStr = JSON.stringify({
       event: eventType,
@@ -76,11 +82,43 @@ export async function dispatchWebhookEvent(
       },
     });
 
-    // Attempt delivery (fire-and-forget, with retry scheduling)
-    attemptDelivery(delivery.id, webhook.url, payloadStr, signature).catch((err) =>
-      console.error(`Webhook delivery ${delivery.id} failed:`, err)
-    );
+    // Attempt delivery with timeout
+    return Promise.race([
+      attemptDelivery(delivery.id, webhook.url, payloadStr, signature),
+      new Promise<void>((_, reject) =>
+        setTimeout(() => reject(new Error('Webhook delivery timeout')), DELIVERY_TIMEOUT_MS)
+      ),
+    ]).catch((err) => {
+      console.error(`Webhook delivery ${delivery.id} failed:`, err);
+      // Ensure delivery is marked as failed with retry scheduled
+      scheduleRetry(delivery.id, 0).catch(() => {});
+    });
+  });
+
+  await Promise.allSettled(deliveryPromises);
+}
+
+/**
+ * Schedule a retry for a failed delivery.
+ */
+async function scheduleRetry(deliveryId: string, currentRetryCount: number) {
+  if (currentRetryCount >= MAX_RETRIES) {
+    await db.webhookDelivery.update({
+      where: { id: deliveryId },
+      data: { status: 'failed' },
+    });
+    return;
   }
+
+  const nextRetryAt = new Date(Date.now() + RETRY_DELAYS_MS[currentRetryCount]);
+  await db.webhookDelivery.update({
+    where: { id: deliveryId },
+    data: {
+      status: 'failed',
+      retryCount: currentRetryCount + 1,
+      nextRetryAt,
+    },
+  });
 }
 
 /**
@@ -92,6 +130,12 @@ async function attemptDelivery(
   payload: string,
   signature: string
 ) {
+  const delivery = await db.webhookDelivery.findUnique({
+    where: { id: deliveryId },
+  });
+
+  if (!delivery) return;
+
   try {
     const response = await fetch(url, {
       method: 'POST',
@@ -101,63 +145,86 @@ async function attemptDelivery(
         'X-Sybadges-Delivery-Id': deliveryId,
       },
       body: payload,
-      signal: AbortSignal.timeout(10000), // 10s timeout
+      signal: AbortSignal.timeout(DELIVERY_TIMEOUT_MS),
     });
 
-    await db.webhookDelivery.update({
-      where: { id: deliveryId },
-      data: {
-        status: response.ok ? 'delivered' : 'failed',
-        responseCode: response.status,
-      },
-    });
-  } catch {
-    // Schedule retry with exponential backoff
-    const delivery = await db.webhookDelivery.findUnique({
-      where: { id: deliveryId },
-    });
-
-    if (!delivery) return;
-
-    const retryDelaysMs = RETRY_DELAYS_MS;
-    const nextRetryIndex = delivery.retryCount;
-
-    if (nextRetryIndex < retryDelaysMs.length) {
-      const nextRetryAt = new Date(Date.now() + retryDelaysMs[nextRetryIndex]);
+    if (response.ok) {
       await db.webhookDelivery.update({
         where: { id: deliveryId },
         data: {
-          status: 'failed',
-          retryCount: delivery.retryCount + 1,
-          nextRetryAt,
+          status: 'delivered',
+          responseCode: response.status,
         },
       });
     } else {
-      // Max retries exhausted
       await db.webhookDelivery.update({
         where: { id: deliveryId },
-        data: { status: 'failed' },
+        data: {
+          responseCode: response.status,
+        },
       });
+      await scheduleRetry(deliveryId, delivery.retryCount);
     }
+  } catch {
+    await scheduleRetry(deliveryId, delivery.retryCount);
   }
 }
 
 /**
  * Retry failed webhook deliveries that are due.
  * Should be called by a cron job every 5 minutes.
+ * Returns summary of processed deliveries.
  */
-export async function retryFailedDeliveries() {
+export async function retryFailedDeliveries(options?: { batchSize?: number }) {
+  const batchSize = options?.batchSize ?? 100;
   const now = new Date();
+
   const pendingRetries = await db.webhookDelivery.findMany({
     where: {
       status: 'failed',
       nextRetryAt: { lte: now },
+      retryCount: { lt: MAX_RETRIES },
     },
     include: { webhook: true },
+    take: batchSize,
+    orderBy: { nextRetryAt: 'asc' },
   });
 
+  let successful = 0;
+  let failed = 0;
+
   for (const delivery of pendingRetries) {
-    const signature = await computeSignature(delivery.payload, delivery.webhook.secret);
-    await attemptDelivery(delivery.id, delivery.webhook.url, delivery.payload, signature);
+    if (!delivery.webhook.isActive) {
+      // Skip inactive webhooks, mark as dead letter
+      await db.webhookDelivery.update({
+        where: { id: delivery.id },
+        data: { status: 'dead_letter' },
+      });
+      failed++;
+      continue;
+    }
+
+    try {
+      const signature = await computeSignature(delivery.payload, delivery.webhook.secret);
+      await attemptDelivery(delivery.id, delivery.webhook.url, delivery.payload, signature);
+
+      // Check if delivery succeeded
+      const updated = await db.webhookDelivery.findUnique({
+        where: { id: delivery.id },
+      });
+      if (updated?.status === 'delivered') {
+        successful++;
+      } else {
+        failed++;
+      }
+    } catch {
+      failed++;
+    }
   }
+
+  return {
+    processed: pendingRetries.length,
+    successful,
+    failed,
+  };
 }
