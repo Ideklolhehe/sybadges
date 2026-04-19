@@ -79,7 +79,7 @@ function SkeletonCardLoader({ duration = 1, className }: SkeletonCardLoaderProps
       )}
     >
       {/* Image placeholder */}
-      <SkeletonLoader variant="rect" width="20%" height="100px" duration={duration} />
+      <SkeletonLoader variant="rect" width="80px" height="100px" duration={duration} />
 
       {/* Text lines */}
       <div className="flex flex-1 flex-col justify-center gap-3">
