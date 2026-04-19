@@ -462,7 +462,7 @@ model WebhookDelivery {
   id           String    @id @default(cuid())
   event        String    // event type that triggered this
   payload      String    // JSON payload sent
-  status       String    @default("pending") // pending | delivered | failed
+  status       String    @default("pending") // pending | delivered | failed | dead_letter
   responseCode Int?
   retryCount   Int       @default(0)
   nextRetryAt  DateTime?
@@ -473,4 +473,15 @@ model WebhookDelivery {
 
   @@index([webhookId, status])
   @@index([nextRetryAt])
+}
+
+// ─── SYSTEM ─────────────────────────────────────────────────────
+
+model SystemLock {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
 }

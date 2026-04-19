@@ -1,8 +1,10 @@
 import { db } from '@/lib/db';
+import { dispatchWebhookEvent } from './webhooks';
 
 /**
  * Unified event log for audit trail and state replay.
  * All gamification events flow through here for observability.
+ * After storing an event, it is dispatched to matching webhook subscribers.
  */
 
 export type GamificationEventType =
@@ -30,7 +32,7 @@ interface RecordEventParams {
 }
 
 export async function recordEvent({ eventType, payload, memberId }: RecordEventParams) {
-  return db.eventStore.create({
+  const event = await db.eventStore.create({
     data: {
       eventType,
       payload: JSON.stringify(payload),
@@ -38,6 +40,13 @@ export async function recordEvent({ eventType, payload, memberId }: RecordEventP
       processed: true,
     },
   });
+
+  // Fire-and-forget: dispatch to webhook subscribers without blocking the caller
+  dispatchWebhookEvent(eventType, payload).catch((err) =>
+    console.error(`Webhook dispatch failed for ${eventType}:`, err)
+  );
+
+  return event;
 }
 
 export async function getEventsByMember(memberId: string, limit = 50) {
