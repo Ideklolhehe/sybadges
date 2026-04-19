@@ -1,4 +1,5 @@
-// This is your Prisma schema file for Youth Achievement Portal
+// Sybadges — Youth Achievement Portal with Trophy-inspired Gamification
+// Prisma schema for SQLite (migration-ready for PostgreSQL)
 
 generator client {
   provider = "prisma-client-js"
@@ -9,7 +10,8 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Admin users
+// ─── CORE IDENTITY ───────────────────────────────────────────────
+
 model Admin {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -19,91 +21,456 @@ model Admin {
   updatedAt DateTime @updatedAt
 }
 
-// Youth members
 model Member {
-  id              String        @id @default(cuid())
-  memberId        String        @unique
+  id              String   @id @default(cuid())
+  memberId        String   @unique
   name            String
   email           String?
   phone           String?
   dateOfBirth     DateTime?
-  joinDate        DateTime      @default(now())
+  joinDate        DateTime @default(now())
   photo           String?
-  level           String        @default("bronze") // bronze, silver, gold, platinum
-  totalBadges     Int           @default(0)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  level           String   @default("bronze") // legacy level — kept for backward compat
+  totalBadges     Int      @default(0)
+  isControlGroup  Boolean  @default(false) // A/B experimentation: true = no gamification UI
+  timezone        String   @default("Asia/Dubai")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  achievements    Achievement[]
-  successStories  SuccessStory[]
-  photos          Photo[]
+  achievements              Achievement[]
+  successStories            SuccessStory[]
+  photos                    Photo[]
+  metricEvents              MetricEvent[]
+  memberMetricTotals        MemberMetricTotal[]
+  memberStreaks             MemberStreak[]
+  streakHistories           StreakHistory[]
+  memberPoints              MemberPoints[]
+  leaderboardEntries        LeaderboardEntry[]
+  notificationLogs          NotificationLog[]
+  notificationPreferences   MemberNotificationPreference?
 }
 
-// Badge library
+// ─── BADGES & ACHIEVEMENTS (Enhanced) ─────────────────────────────
+
 model Badge {
-  id          String   @id @default(cuid())
-  name        String
-  nameAr      String
-  description String
+  id            String   @id @default(cuid())
+  name          String
+  nameAr        String
+  description   String
   descriptionAr String
-  category    String
-  categoryAr  String
-  level       String   // bronze, silver, gold, platinum
-  icon        String
-  color       String   @default("#2E2973")
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  category      String
+  categoryAr    String
+  level         String   // bronze, silver, gold, platinum
+  icon          String
+  color         String   @default("#2E2973")
+  isActive      Boolean  @default(true)
 
-  achievements Achievement[]
+  // Trophy-inspired achievement types
+  triggerType   String   @default("manual") // manual | metric | streak | composite
+  triggerConfig String   @default("{}") // JSON: { metricId, threshold } | { streakId, targetLength } | { prerequisiteBadgeIds }
+  isAutomatic   Boolean  @default(false) // true = auto-award when trigger conditions met
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  achievements             Achievement[]
+  prerequisiteParents      AchievementPrerequisite[] @relation("ParentAchievement")
+  prerequisiteChildren     AchievementPrerequisite[] @relation("ChildAchievement")
+  pointsTriggers           PointsTrigger[]
 }
 
-// Member achievements (badge requests)
 model Achievement {
-  id          String   @id @default(cuid())
-  status      String   @default("pending") // pending, approved, rejected
-  reason      String
-  reasonAr    String
-  evidence    String?  // URL to evidence document/image
-  approvedBy  String?
-  approvedAt  DateTime?
-  rejectedBy  String?
-  rejectedAt  DateTime?
-  notes       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String    @id @default(cuid())
+  status     String    @default("pending") // pending, approved, rejected
+  reason     String
+  reasonAr   String
+  evidence   String?
+  approvedBy String?
+  approvedAt DateTime?
+  rejectedBy String?
+  rejectedAt DateTime?
+  notes      String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
-  memberId    String
-  member      Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
-  badgeId     String
-  badge       Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  badgeId String
+  badge   Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
 }
 
-// Success stories showcase
+model AchievementPrerequisite {
+  id                   String @id @default(cuid())
+  parentAchievementId  String // The composite badge that requires sub-badges
+  childAchievementId   String // Required sub-badge
+  requiredCount        Int    @default(1)
+
+  parentBadge Badge @relation("ParentAchievement", fields: [parentAchievementId], references: [id], onDelete: Cascade)
+  childBadge  Badge @relation("ChildAchievement", fields: [childAchievementId], references: [id], onDelete: Cascade)
+}
+
+// ─── SUCCESS STORIES & PHOTOS ─────────────────────────────────────
+
 model SuccessStory {
-  id          String   @id @default(cuid())
-  title       String
-  titleAr     String
-  content     String
-  contentAr   String
-  image       String
-  isFeatured  Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String  @id @default(cuid())
+  title      String
+  titleAr    String
+  content    String
+  contentAr  String
+  image      String
+  isFeatured Boolean @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  memberId    String
-  member      Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
 }
 
-// Member photos
 model Photo {
-  id          String   @id @default(cuid())
-  title       String?
-  url         String
-  category    String?  // profile, achievement, activity, etc.
-  createdAt   DateTime @default(now())
+  id        String   @id @default(cuid())
+  title     String?
+  url       String
+  category  String?
+  createdAt DateTime @default(now())
 
-  memberId    String
-  member      Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+}
+
+// ─── METRICS & EVENTS ENGINE (Phase 1 Foundation) ─────────────────
+
+model Metric {
+  id            String  @id @default(cuid())
+  name          String  @unique
+  nameAr        String
+  description   String
+  descriptionAr String
+  unit          String  @default("count") // count, hours, days, points, etc.
+  isActive      Boolean @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  events             MetricEvent[]
+  memberMetricTotals MemberMetricTotal[]
+  streaks            Streak[]
+  pointsTriggers     PointsTrigger[]
+  leaderboards       Leaderboard[]
+}
+
+model MetricEvent {
+  id             String   @id @default(cuid())
+  value          Float    @default(1) // positive or negative decimal
+  attributes     String   @default("{}") // JSON: { workshop_name, activity_type, book_isbn, etc. }
+  idempotencyKey String?  @unique // prevent duplicate processing
+  createdAt      DateTime @default(now())
+
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  metricId String
+  metric   Metric @relation(fields: [metricId], references: [id], onDelete: Cascade)
+
+  @@index([memberId, metricId])
+  @@index([createdAt])
+}
+
+model MemberMetricTotal {
+  id         String   @id @default(cuid())
+  totalValue Float    @default(0)
+  updatedAt  DateTime @updatedAt
+
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  metricId String
+  metric   Metric @relation(fields: [metricId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, metricId])
+}
+
+// Unified event log for audit trail and replay
+model EventStore {
+  id        String   @id @default(cuid())
+  eventType String   // metric.recorded, achievement.unlocked, streak.extended, points.changed, etc.
+  payload   String   // JSON payload
+  memberId  String?  // optional: some events are system-level
+  processed Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([eventType])
+  @@index([memberId])
+  @@index([createdAt])
+}
+
+// ─── STREAKS ─────────────────────────────────────────────────────
+
+model Streak {
+  id               String  @id @default(cuid())
+  name             String
+  nameAr           String
+  description      String
+  descriptionAr    String
+  frequency        String  @default("daily") // daily | weekly | monthly
+  threshold        Float   @default(1) // minimum metric value per period
+  initialFreezes   Int     @default(0)
+  freezeAccrualRate Int    @default(0) // grant N freezes per freezeAccrualDays
+  freezeAccrualDays Int    @default(7)
+  maxFreezes       Int     @default(10)
+  isActive         Boolean @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  metricId String
+  metric   Metric @relation(fields: [metricId], references: [id], onDelete: Cascade)
+
+  memberStreaks  MemberStreak[]
+  histories      StreakHistory[]
+  leaderboards   Leaderboard[]
+}
+
+model MemberStreak {
+  id                   String    @id @default(cuid())
+  currentLength        Int       @default(0)
+  longestLength        Int       @default(0)
+  lastCompletedPeriod  String?   // ISO date string of last completed period start
+  freezesRemaining     Int       @default(0)
+  freezesUsed          Int       @default(0)
+  status               String    @default("active") // active | broken
+  startedAt            DateTime  @default(now())
+  lostAt               DateTime?
+  updatedAt            DateTime  @updatedAt
+
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  streakId String
+  streak   Streak @relation(fields: [streakId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, streakId])
+}
+
+model StreakHistory {
+  id        String   @id @default(cuid())
+  length    Int
+  startDate DateTime
+  endDate   DateTime
+  createdAt DateTime @default(now())
+
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  streakId String
+  streak   Streak @relation(fields: [streakId], references: [id], onDelete: Cascade)
+
+  @@index([memberId, streakId])
+}
+
+// ─── POINTS & LEVELS ─────────────────────────────────────────────
+
+model PointsConfig {
+  id            String  @id @default(cuid())
+  name          String  @unique
+  nameAr        String
+  description   String
+  descriptionAr String
+  isActive      Boolean @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  triggers     PointsTrigger[]
+  levels       PointsLevel[]
+  boosts       PointsBoost[]
+  memberPoints MemberPoints[]
+  leaderboards Leaderboard[]
+}
+
+model PointsTrigger {
+  id             String  @id @default(cuid())
+  sourceType     String  // metric | achievement
+  pointsPerUnit  Float   @default(0) // for metric: points per 1 unit of metric value
+  pointsFixed    Float   @default(0) // for achievement: fixed points on completion
+  isActive       Boolean @default(true)
+  createdAt      DateTime @default(now())
+
+  pointsConfigId String
+  pointsConfig   PointsConfig @relation(fields: [pointsConfigId], references: [id], onDelete: Cascade)
+
+  metricId String?
+  metric   Metric? @relation(fields: [metricId], references: [id], onDelete: Cascade)
+
+  badgeId String?
+  badge   Badge? @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+}
+
+model PointsLevel {
+  id        String @id @default(cuid())
+  threshold Int    // minimum points for this level
+  name      String
+  nameAr    String
+  icon      String @default("⭐")
+  color     String @default("#2E2973")
+  order     Int    // display/progression order
+
+  pointsConfigId String
+  pointsConfig   PointsConfig @relation(fields: [pointsConfigId], references: [id], onDelete: Cascade)
+
+  @@index([pointsConfigId, order])
+}
+
+model PointsBoost {
+  id         String    @id @default(cuid())
+  name       String
+  nameAr     String
+  multiplier Float     @default(2.0) // e.g., 2.0 = double points
+  startDate  DateTime
+  endDate    DateTime
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+
+  pointsConfigId String
+  pointsConfig   PointsConfig @relation(fields: [pointsConfigId], references: [id], onDelete: Cascade)
+}
+
+model MemberPoints {
+  id           String   @id @default(cuid())
+  totalPoints  Float    @default(0)
+  currentLevel Int      @default(0) // current level order
+  updatedAt    DateTime @updatedAt
+
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  pointsConfigId String
+  pointsConfig   PointsConfig @relation(fields: [pointsConfigId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, pointsConfigId])
+}
+
+// ─── LEADERBOARDS ────────────────────────────────────────────────
+
+model Leaderboard {
+  id               String   @id @default(cuid())
+  name             String
+  nameAr           String
+  description      String
+  descriptionAr    String
+  type             String   @default("perpetual") // perpetual | repeating
+  rankingMethod    String   @default("metric") // metric | points | streak
+  resetIntervalDays Int?    // for repeating leaderboards
+  participantLimit Int      @default(100)
+  startDate        DateTime?
+  endDate          DateTime?
+  status           String   @default("active") // inactive | scheduled | active | finished | archived
+  currentRun       Int      @default(1) // for repeating: increments on each reset
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Source: which metric, points config, or streak drives this leaderboard
+  metricId       String?
+  metric         Metric?       @relation(fields: [metricId], references: [id], onDelete: Cascade)
+
+  pointsConfigId String?
+  pointsConfig   PointsConfig? @relation(fields: [pointsConfigId], references: [id], onDelete: Cascade)
+
+  streakId       String?
+  streak         Streak?       @relation(fields: [streakId], references: [id], onDelete: Cascade)
+
+  entries LeaderboardEntry[]
+}
+
+model LeaderboardEntry {
+  id           String   @id @default(cuid())
+  runNumber    Int      @default(1) // for repeating leaderboards
+  score        Float    @default(0)
+  rank         Int      @default(0)
+  previousRank Int?     // for rank change indicators
+  updatedAt    DateTime @updatedAt
+
+  leaderboardId String
+  leaderboard   Leaderboard @relation(fields: [leaderboardId], references: [id], onDelete: Cascade)
+
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([leaderboardId, memberId, runNumber])
+  @@index([leaderboardId, runNumber, rank])
+}
+
+// ─── NOTIFICATIONS ───────────────────────────────────────────────
+
+model NotificationTemplate {
+  id        String  @id @default(cuid())
+  type      String  @unique // achievement_completed | streak_reminder | recap | reactivation
+  subject   String
+  subjectAr String
+  body      String  // HTML template with {{variable}} placeholders
+  bodyAr    String
+  channel   String  @default("in_app") // in_app | email
+  isActive  Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  logs NotificationLog[]
+}
+
+model NotificationLog {
+  id     String @id @default(cuid())
+  channel String @default("in_app") // in_app | email
+  status  String @default("pending") // pending | sent | failed | read
+  sentAt  DateTime?
+  readAt  DateTime?
+  createdAt DateTime @default(now())
+
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  templateId String
+  template   NotificationTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([memberId, status])
+  @@index([createdAt])
+}
+
+model MemberNotificationPreference {
+  id                     String  @id @default(cuid())
+  achievementCompleted   Boolean @default(true)
+  streakReminder         Boolean @default(true)
+  recap                  Boolean @default(true)
+  reactivation           Boolean @default(true)
+
+  memberId String @unique
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+}
+
+// ─── WEBHOOKS ────────────────────────────────────────────────────
+
+model Webhook {
+  id        String  @id @default(cuid())
+  url       String
+  secret    String  // HMAC-SHA256 signing secret
+  events    String  @default("[]") // JSON array of subscribed event types
+  isActive  Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  deliveries WebhookDelivery[]
+}
+
+model WebhookDelivery {
+  id           String    @id @default(cuid())
+  event        String    // event type that triggered this
+  payload      String    // JSON payload sent
+  status       String    @default("pending") // pending | delivered | failed
+  responseCode Int?
+  retryCount   Int       @default(0)
+  nextRetryAt  DateTime?
+  createdAt    DateTime  @default(now())
+
+  webhookId String
+  webhook   Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([webhookId, status])
+  @@index([nextRetryAt])
 }
