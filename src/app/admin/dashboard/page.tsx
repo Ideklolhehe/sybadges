@@ -2,13 +2,16 @@
 
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Users, Award, Clock, CheckCircle, TrendingUp } from 'lucide-react'
+import { Users, Award, Clock, CheckCircle, TrendingUp, Activity, Flame, Star, Trophy } from 'lucide-react'
 
 interface Stats {
   totalMembers: number
   totalBadges: number
   pendingApprovals: number
   approvedToday: number
+  totalMetricEvents: number
+  activeStreaks: number
+  activeLeaderboards: number
 }
 
 export default function AdminDashboard() {
@@ -16,7 +19,10 @@ export default function AdminDashboard() {
     totalMembers: 0,
     totalBadges: 0,
     pendingApprovals: 0,
-    approvedToday: 0
+    approvedToday: 0,
+    totalMetricEvents: 0,
+    activeStreaks: 0,
+    activeLeaderboards: 0,
   })
   const [loading, setLoading] = useState(true)
 
@@ -26,22 +32,31 @@ export default function AdminDashboard() {
 
   const fetchStats = async () => {
     try {
-      const [membersRes, achievementsRes] = await Promise.all([
+      const [membersRes, achievementsRes, metricsRes, streaksRes, leaderboardsRes] = await Promise.all([
         fetch('/api/members'),
-        fetch('/api/achievements?status=pending')
+        fetch('/api/achievements?status=pending'),
+        fetch('/api/metrics'),
+        fetch('/api/streaks'),
+        fetch('/api/leaderboards'),
       ])
 
       const members = await membersRes.json()
       const pending = await achievementsRes.json()
+      const metrics = await metricsRes.json()
+      const streaks = await streaksRes.json()
+      const leaderboards = await leaderboardsRes.json()
 
-      // Calculate total badges from members
-      const totalBadges = members.reduce((sum: number, m: any) => sum + (m.totalBadges || 0), 0)
+      const totalBadges = members.reduce((sum: number, m: { totalBadges?: number }) => sum + (m.totalBadges || 0), 0)
+      const totalEvents = metrics.reduce((sum: number, m: { _count?: { events: number } }) => sum + (m._count?.events || 0), 0)
 
       setStats({
         totalMembers: members.length,
         totalBadges,
         pendingApprovals: pending.length,
-        approvedToday: 0 // Would need proper date filtering
+        approvedToday: 0,
+        totalMetricEvents: totalEvents,
+        activeStreaks: streaks.length,
+        activeLeaderboards: leaderboards.length,
       })
     } catch (error) {
       console.error('Error fetching stats:', error)
@@ -51,44 +66,18 @@ export default function AdminDashboard() {
   }
 
   const statCards = [
-    {
-      title: 'إجمالي الأعضاء',
-      titleEn: 'Total Members',
-      value: stats.totalMembers,
-      icon: Users,
-      color: '#2E2973',
-      bgColor: 'bg-blue-50 dark:bg-blue-900/20'
-    },
-    {
-      title: 'الشارات الممنوحة',
-      titleEn: 'Badges Awarded',
-      value: stats.totalBadges,
-      icon: Award,
-      color: '#E04511',
-      bgColor: 'bg-orange-50 dark:bg-orange-900/20'
-    },
-    {
-      title: 'طلبات معلقة',
-      titleEn: 'Pending Requests',
-      value: stats.pendingApprovals,
-      icon: Clock,
-      color: '#F59E0B',
-      bgColor: 'bg-yellow-50 dark:bg-yellow-900/20'
-    },
-    {
-      title: 'تمت الموافقة اليوم',
-      titleEn: 'Approved Today',
-      value: stats.approvedToday,
-      icon: CheckCircle,
-      color: '#10B981',
-      bgColor: 'bg-green-50 dark:bg-green-900/20'
-    }
+    { title: 'إجمالي الأعضاء', titleEn: 'Total Members', value: stats.totalMembers, icon: Users, color: '#2E2973', bgColor: 'bg-blue-50 dark:bg-blue-900/20' },
+    { title: 'الشارات الممنوحة', titleEn: 'Badges Awarded', value: stats.totalBadges, icon: Award, color: '#E04511', bgColor: 'bg-orange-50 dark:bg-orange-900/20' },
+    { title: 'طلبات معلقة', titleEn: 'Pending Requests', value: stats.pendingApprovals, icon: Clock, color: '#F59E0B', bgColor: 'bg-yellow-50 dark:bg-yellow-900/20' },
+    { title: 'الأحداث المسجلة', titleEn: 'Metric Events', value: stats.totalMetricEvents, icon: Activity, color: '#3B82F6', bgColor: 'bg-blue-50 dark:bg-blue-900/20' },
+    { title: 'السلاسل النشطة', titleEn: 'Active Streaks', value: stats.activeStreaks, icon: Flame, color: '#EF4444', bgColor: 'bg-red-50 dark:bg-red-900/20' },
+    { title: 'لوحات المتصدرين', titleEn: 'Leaderboards', value: stats.activeLeaderboards, icon: Trophy, color: '#8B5CF6', bgColor: 'bg-purple-50 dark:bg-purple-900/20' },
   ]
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {[...Array(4)].map((_, i) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {[...Array(6)].map((_, i) => (
           <div key={i} className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 animate-pulse">
             <div className="h-20 bg-gray-200 dark:bg-gray-700 rounded-lg" />
           </div>
@@ -109,12 +98,12 @@ export default function AdminDashboard() {
           لوحة التحكم
         </h2>
         <p className="text-gray-600 dark:text-gray-400">
-          نظرة عامة على نشاط البوابة
+          نظرة عامة على نشاط البوابة والتلعيب
         </p>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         {statCards.map((stat, index) => {
           const Icon = stat.icon
           return (
@@ -134,7 +123,7 @@ export default function AdminDashboard() {
               </div>
               <div className="space-y-1">
                 <p className="text-sm text-gray-600 dark:text-gray-400">{stat.titleEn}</p>
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">
                   {stat.title}
                 </h3>
                 <p className="text-3xl font-extrabold" style={{ color: stat.color }}>

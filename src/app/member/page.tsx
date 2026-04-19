@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Award, Shield, TrendingUp, Clock } from 'lucide-react'
+import { Award, Shield, TrendingUp, Clock, Flame, Star, Trophy } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 interface MemberStats {
@@ -10,6 +10,21 @@ interface MemberStats {
   pendingRequests: number
   level: string
   joinDate: string
+}
+
+interface PointsData {
+  configName: string
+  configNameAr: string
+  totalPoints: number
+  currentLevel: { name: string; nameAr: string; icon: string; color: string } | null
+  nextLevel: { name: string; nameAr: string; threshold: number; pointsNeeded: number } | null
+}
+
+interface StreakData {
+  currentLength: number
+  longestLength: number
+  status: string
+  streak: { nameAr: string; frequency: string }
 }
 
 const mockMemberId = 'MEM001'
@@ -22,18 +37,33 @@ export default function MemberHome() {
     level: 'bronze',
     joinDate: ''
   })
+  const [points, setPoints] = useState<PointsData[]>([])
+  const [streaks, setStreaks] = useState<StreakData[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetchMemberStats()
+    fetchAllData()
   }, [])
 
-  const fetchMemberStats = async () => {
+  const fetchAllData = async () => {
     try {
-      const res = await fetch(`/api/members/${mockMemberId}`)
-      const data = await res.json()
-      const achievementsRes = await fetch(`/api/achievements?memberId=${mockMemberId}&status=pending`)
-      const pending = await achievementsRes.json()
+      // Get member internal ID first
+      const membersRes = await fetch('/api/members')
+      const members = await membersRes.json()
+      const member = members.find((m: { memberId: string }) => m.memberId === mockMemberId)
+      if (!member) return
+
+      const [memberRes, pendingRes, pointsRes, streaksRes] = await Promise.all([
+        fetch(`/api/members/${member.id}`),
+        fetch(`/api/achievements?memberId=${member.id}&status=pending`),
+        fetch(`/api/members/${member.id}/points`),
+        fetch(`/api/members/${member.id}/streaks`),
+      ])
+
+      const data = await memberRes.json()
+      const pending = await pendingRes.json()
+      const pointsData = await pointsRes.json()
+      const streaksData = await streaksRes.json()
 
       setStats({
         totalBadges: data.totalBadges || 0,
@@ -41,6 +71,8 @@ export default function MemberHome() {
         level: data.level || 'bronze',
         joinDate: data.joinDate
       })
+      setPoints(pointsData)
+      setStreaks(streaksData)
     } catch (error) {
       console.error('Error fetching member stats:', error)
     } finally {
@@ -80,6 +112,8 @@ export default function MemberHome() {
   }
 
   const currentLevel = levelConfig[stats.level as keyof typeof levelConfig] || levelConfig.bronze
+  const xpData = points[0]
+  const bestStreak = streaks.length > 0 ? streaks.reduce((best, s) => (s.currentLength > (best?.currentLength ?? 0) ? s : best), streaks[0]) : null
 
   const quickActions = [
     {
@@ -89,22 +123,22 @@ export default function MemberHome() {
       href: '/member/achievements'
     },
     {
+      title: 'سلاسلي 🔥',
+      icon: Flame,
+      color: 'from-orange-500 to-red-500',
+      href: '/member/streaks'
+    },
+    {
+      title: 'المتصدرون',
+      icon: Trophy,
+      color: 'from-purple-500 to-purple-700',
+      href: '/member/leaderboards'
+    },
+    {
       title: 'استكشف الشارات',
       icon: Shield,
       color: 'from-[#E04511] to-[#c43a0e]',
       href: '/member/badges'
-    },
-    {
-      title: 'تعديل ملفي',
-      icon: TrendingUp,
-      color: 'from-gray-600 to-gray-700 dark:from-gray-500 dark:to-gray-600',
-      href: '/member/profile'
-    },
-    {
-      title: 'الطلبات المعلقة',
-      icon: Clock,
-      color: 'from-yellow-500 to-yellow-600',
-      href: '/member/achievements'
     }
   ]
 
@@ -124,6 +158,51 @@ export default function MemberHome() {
         </p>
       </div>
 
+      {/* XP + Level Card (new) */}
+      {xpData && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.1 }}
+          className="bg-gradient-to-r from-[#2E2973] via-[#3d36a0] to-[#5548c7] text-white rounded-2xl p-6 mb-8 shadow-xl"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <span className="text-3xl">{xpData.currentLevel?.icon || '⭐'}</span>
+              <div>
+                <p className="text-sm opacity-80">مستواك الحالي</p>
+                <p className="text-2xl font-bold">{xpData.currentLevel?.nameAr || 'مبتدئ'}</p>
+              </div>
+            </div>
+            <div className="text-left">
+              <p className="text-sm opacity-80">نقاط الخبرة</p>
+              <p className="text-3xl font-extrabold">{Math.round(xpData.totalPoints)} <span className="text-sm font-normal opacity-60">XP</span></p>
+            </div>
+          </div>
+
+          {/* Progress to next level */}
+          {xpData.nextLevel && (
+            <div>
+              <div className="flex justify-between text-xs mb-2 opacity-80">
+                <span>{xpData.currentLevel?.nameAr}</span>
+                <span>{xpData.nextLevel.nameAr} ({xpData.nextLevel.threshold} XP)</span>
+              </div>
+              <div className="w-full bg-white/20 rounded-full h-3">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{
+                    width: `${Math.min(((xpData.totalPoints - (xpData.nextLevel.threshold - xpData.nextLevel.pointsNeeded)) / xpData.nextLevel.pointsNeeded) * 100, 100)}%`
+                  }}
+                  transition={{ duration: 1, delay: 0.5 }}
+                  className="h-3 bg-yellow-400 rounded-full"
+                />
+              </div>
+              <p className="text-xs mt-1 opacity-60">{Math.round(xpData.nextLevel.pointsNeeded)} نقطة للمستوى التالي</p>
+            </div>
+          )}
+        </motion.div>
+      )}
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div className="bg-gradient-to-br from-[#2E2973] to-[#1f1b4d] text-white rounded-2xl p-6 shadow-xl">
@@ -142,22 +221,23 @@ export default function MemberHome() {
           <p className="text-sm opacity-80">طلبات معلقة</p>
         </div>
 
+        {/* Streak card */}
+        <div className="bg-gradient-to-br from-orange-500 to-red-500 text-white rounded-2xl p-6 shadow-xl">
+          <div className="flex items-center justify-between mb-4">
+            <Flame className="w-8 h-8 opacity-80" />
+            <span className="text-4xl font-bold">{bestStreak?.currentLength || 0}</span>
+          </div>
+          <p className="text-sm opacity-80">
+            {bestStreak?.streak.nameAr || 'سلسلة النشاط'}
+          </p>
+        </div>
+
         <div className={`rounded-2xl p-6 border-2 ${currentLevel.color}`}>
           <div className="flex items-center justify-between mb-4">
             <Shield className="w-8 h-8" />
           </div>
           <p className="text-sm mb-1">مستواك الحالي</p>
           <p className="text-3xl font-bold">{currentLevel.label}</p>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-2xl p-6 border-2 border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between mb-4">
-            <TrendingUp className="w-8 h-8 text-gray-400" />
-          </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">تاريخ الانضمام</p>
-          <p className="text-lg font-semibold">
-            {stats.joinDate ? new Date(stats.joinDate).toLocaleDateString('ar-EG') : '-'}
-          </p>
         </div>
       </div>
 
@@ -190,7 +270,7 @@ export default function MemberHome() {
       {/* Recent Activity */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border-2 border-gray-200 dark:border-gray-700">
         <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-          <Award className="w-5 h-5 text-[#2E2973]" />
+          <Star className="w-5 h-5 text-yellow-500" />
           بدأ رحلتك!
         </h3>
         <div className="space-y-4">
@@ -201,12 +281,12 @@ export default function MemberHome() {
           </div>
           <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
             <p className="text-gray-700 dark:text-gray-300">
-              🏆 تقدم للحصول على المزيد من الشارات للوصول لمستويات أعلى
+              🔥 حافظ على سلسلة نشاطك اليومي لكسب نقاط إضافية
             </p>
           </div>
           <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
             <p className="text-gray-700 dark:text-gray-300">
-              ⭐ شارك إنجازاتك وكن مصدر إلهام للآخرين
+              🏆 تنافس مع أقرانك في لوحة المتصدرين
             </p>
           </div>
         </div>

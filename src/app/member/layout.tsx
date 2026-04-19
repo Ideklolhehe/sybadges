@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Award, User, Home, ChevronRight, ChevronLeft, X } from 'lucide-react'
+import { Award, User, Home, ChevronRight, ChevronLeft, X, Flame, Trophy } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useRouter } from 'next/navigation'
@@ -30,6 +30,18 @@ const navItems = [
     icon: Award,
     label: 'مكتبة الشارات',
     labelEn: 'Badge Catalog'
+  },
+  {
+    href: '/member/streaks',
+    icon: Flame,
+    label: 'سلاسلي',
+    labelEn: 'My Streaks'
+  },
+  {
+    href: '/member/leaderboards',
+    icon: Trophy,
+    label: 'المتصدرون',
+    labelEn: 'Leaderboards'
   },
   {
     href: '/member/profile',
