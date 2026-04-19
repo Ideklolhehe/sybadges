@@ -114,6 +114,7 @@ async function getMetricValueInPeriod(
  * Process streaks after a metric event.
  * Called by metrics.ts after recording a metric event.
  */
+// _eventValue is unused here — streaks aggregate via getMetricValueInPeriod over full periods
 export async function processStreaks(
   memberId: string,
   metricId: string,
