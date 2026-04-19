@@ -1,0 +1,109 @@
+// This is your Prisma schema file for Youth Achievement Portal
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Admin users
+model Admin {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Youth members
+model Member {
+  id              String        @id @default(cuid())
+  memberId        String        @unique
+  name            String
+  email           String?
+  phone           String?
+  dateOfBirth     DateTime?
+  joinDate        DateTime      @default(now())
+  photo           String?
+  level           String        @default("bronze") // bronze, silver, gold, platinum
+  totalBadges     Int           @default(0)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  achievements    Achievement[]
+  successStories  SuccessStory[]
+  photos          Photo[]
+}
+
+// Badge library
+model Badge {
+  id          String   @id @default(cuid())
+  name        String
+  nameAr      String
+  description String
+  descriptionAr String
+  category    String
+  categoryAr  String
+  level       String   // bronze, silver, gold, platinum
+  icon        String
+  color       String   @default("#2E2973")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  achievements Achievement[]
+}
+
+// Member achievements (badge requests)
+model Achievement {
+  id          String   @id @default(cuid())
+  status      String   @default("pending") // pending, approved, rejected
+  reason      String
+  reasonAr    String
+  evidence    String?  // URL to evidence document/image
+  approvedBy  String?
+  approvedAt  DateTime?
+  rejectedBy  String?
+  rejectedAt  DateTime?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  memberId    String
+  member      Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  badgeId     String
+  badge       Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+}
+
+// Success stories showcase
+model SuccessStory {
+  id          String   @id @default(cuid())
+  title       String
+  titleAr     String
+  content     String
+  contentAr   String
+  image       String
+  isFeatured  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  memberId    String
+  member      Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+}
+
+// Member photos
+model Photo {
+  id          String   @id @default(cuid())
+  title       String?
+  url         String
+  category    String?  // profile, achievement, activity, etc.
+  createdAt   DateTime @default(now())
+
+  memberId    String
+  member      Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+}
