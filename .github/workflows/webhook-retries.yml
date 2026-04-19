@@ -1,0 +1,33 @@
+name: Webhook Retry Dispatcher
+
+on:
+  schedule:
+    - cron: '*/5 * * * *' # Every 5 minutes
+  workflow_dispatch: # Manual trigger for testing/forced retries
+
+jobs:
+  dispatch-retries:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4 # Prevent hanging jobs from consuming minutes
+
+    steps:
+      - name: Trigger Webhook Retry Endpoint
+        id: retry
+        run: |
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X GET "${{ secrets.API_BASE_URL }}/api/cron/webhook-retries" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "X-Requested-By: github-actions" \
+            -H "Content-Type: application/json" \
+            --max-time 30)
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+
+          echo "Response Code: $HTTP_CODE"
+          echo "Response Body: $BODY"
+
+          if [ "$HTTP_CODE" -ne 200 ]; then
+            echo "Retry endpoint returned non-200 status"
+            exit 1
+          fi
+        shell: bash
