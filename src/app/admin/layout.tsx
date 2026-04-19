@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Shield, Users, Award, BarChart3, Settings, ChevronRight, ChevronLeft, X } from 'lucide-react'
+import { Shield, Users, Award, BarChart3, Settings, ChevronRight, ChevronLeft, X, Activity, Flame, Star, Trophy } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useRouter } from 'next/navigation'
@@ -36,6 +36,30 @@ const navItems = [
     icon: Shield,
     label: 'مكتبة الشارات',
     labelEn: 'Badges'
+  },
+  {
+    href: '/admin/metrics',
+    icon: Activity,
+    label: 'المقاييس',
+    labelEn: 'Metrics'
+  },
+  {
+    href: '/admin/streaks',
+    icon: Flame,
+    label: 'السلاسل',
+    labelEn: 'Streaks'
+  },
+  {
+    href: '/admin/points',
+    icon: Star,
+    label: 'النقاط والمستويات',
+    labelEn: 'Points & Levels'
+  },
+  {
+    href: '/admin/leaderboards',
+    icon: Trophy,
+    label: 'لوحات المتصدرين',
+    labelEn: 'Leaderboards'
   },
   {
     href: '/admin/settings',
