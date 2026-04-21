@@ -2,9 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { translate } from '@/lib/translator';
 import type { Language } from '@/lib/translator';
 
+/**
+ * The Code Translator is a development-only tool and is excluded from the
+ * published web app.  Set ENABLE_CODE_TRANSLATOR=true in .env.local to use it.
+ */
+const TRANSLATOR_ENABLED = process.env.ENABLE_CODE_TRANSLATOR === 'true';
+
 const SUPPORTED_LANGUAGES: Language[] = ['python', 'javascript', 'typescript', 'java', 'cpp'];
 
 export async function POST(request: NextRequest) {
+  if (!TRANSLATOR_ENABLED) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
   try {
     const body = await request.json();
     const { sourceCode, sourceLang, targetLang, runTests } = body;
@@ -59,6 +69,10 @@ export async function POST(request: NextRequest) {
  * GET /api/translate — returns metadata about supported languages and pairs.
  */
 export async function GET() {
+  if (!TRANSLATOR_ENABLED) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
   return NextResponse.json({
     supportedLanguages: SUPPORTED_LANGUAGES,
     supportedPairs: [
