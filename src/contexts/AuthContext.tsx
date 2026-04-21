@@ -27,7 +27,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const userName = session?.user?.name ?? null
 
   const signIn = async (type: UserType, email: string, password: string) => {
-    const result = await nextAuthSignIn(type ?? 'admin', {
+    if (!type) return { error: 'نوع المستخدم غير محدد' }
+
+    const result = await nextAuthSignIn(type, {
       email,
       password,
       redirect: false,

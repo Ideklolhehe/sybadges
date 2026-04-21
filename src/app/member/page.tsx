@@ -54,6 +54,11 @@ export default function MemberHome() {
     try {
       // Get current member from session API
       const sessionRes = await fetch('/api/auth/session')
+      if (!sessionRes.ok) {
+        setError('فشل في تحميل بيانات الجلسة. يرجى تسجيل الدخول مجدداً.')
+        setLoading(false)
+        return
+      }
       const session = await sessionRes.json()
       const memberId = session?.user?.memberId
 
