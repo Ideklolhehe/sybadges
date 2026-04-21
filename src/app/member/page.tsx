@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Award, Shield, TrendingUp, Clock, Flame, Star, Trophy } from 'lucide-react'
+import { Award, Shield, Clock, Flame, Star, Trophy } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface MemberStats {
   totalBadges: number
@@ -27,10 +28,9 @@ interface StreakData {
   streak: { nameAr: string; frequency: string }
 }
 
-const mockMemberId = 'MEM001'
-
 export default function MemberHome() {
   const router = useRouter()
+  const { isAuthenticated } = useAuth()
   const [stats, setStats] = useState<MemberStats>({
     totalBadges: 0,
     pendingRequests: 0,
@@ -42,15 +42,25 @@ export default function MemberHome() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/signin')
+      return
+    }
     fetchAllData()
-  }, [])
+  }, [isAuthenticated])
 
   const fetchAllData = async () => {
     try {
-      // Get member internal ID first
+      // Get current member from session API
+      const sessionRes = await fetch('/api/auth/session')
+      const session = await sessionRes.json()
+      const memberId = session?.user?.memberId
+
+      if (!memberId) return
+
       const membersRes = await fetch('/api/members')
       const members = await membersRes.json()
-      const member = members.find((m: { memberId: string }) => m.memberId === mockMemberId)
+      const member = members.find((m: { memberId: string }) => m.memberId === memberId)
       if (!member) return
 
       const [memberRes, pendingRes, pointsRes, streaksRes] = await Promise.all([

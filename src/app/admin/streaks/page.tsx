@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Flame, Plus, Snowflake } from 'lucide-react'
+import { Flame } from 'lucide-react'
 
 interface Streak {
   id: string
@@ -12,8 +12,6 @@ interface Streak {
   descriptionAr: string
   frequency: string
   threshold: number
-  initialFreezes: number
-  maxFreezes: number
   metric: { name: string; nameAr: string; unit: string }
   _count: { memberStreaks: number }
 }
@@ -87,12 +85,6 @@ export default function AdminStreaks() {
               <div className="flex justify-between">
                 <span className="text-gray-500 dark:text-gray-400">الحد الأدنى:</span>
                 <span className="font-medium text-gray-900 dark:text-white">{streak.threshold} {streak.metric.unit}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                  <Snowflake className="w-3 h-3" /> التجميد:
-                </span>
-                <span className="font-medium text-gray-900 dark:text-white">{streak.initialFreezes} (حد أقصى {streak.maxFreezes})</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500 dark:text-gray-400">الأعضاء:</span>

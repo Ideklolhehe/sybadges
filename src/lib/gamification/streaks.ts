@@ -9,14 +9,8 @@ import { checkStreakAchievements } from './achievements';
 
 const DEFAULT_TIMEZONE = 'Asia/Dubai';
 
-/**
- * Get the start of the current period in the given timezone.
- * Uses Intl.DateTimeFormat for timezone-aware date calculations.
- */
 function getCurrentPeriodStart(frequency: string, timezone: string = DEFAULT_TIMEZONE): string {
   const now = new Date();
-
-  // Get the date components in the target timezone
   const formatter = new Intl.DateTimeFormat('en-CA', {
     timeZone: timezone,
     year: 'numeric',
@@ -32,7 +26,6 @@ function getCurrentPeriodStart(frequency: string, timezone: string = DEFAULT_TIM
     case 'daily':
       return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     case 'weekly': {
-      // Get the Monday of the current week
       const date = new Date(year, month - 1, day);
       const dayOfWeek = date.getDay();
       const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
@@ -46,9 +39,6 @@ function getCurrentPeriodStart(frequency: string, timezone: string = DEFAULT_TIM
   }
 }
 
-/**
- * Get the previous period start from a given period.
- */
 function getPreviousPeriodStart(periodStart: string, frequency: string): string {
   const [year, month, day] = periodStart.split('-').map(Number);
   const date = new Date(year, month - 1, day);
@@ -68,15 +58,11 @@ function getPreviousPeriodStart(periodStart: string, frequency: string): string 
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
-/**
- * Get total metric value for a member in a specific period.
- */
 async function getMetricValueInPeriod(
   memberId: string,
   metricId: string,
   periodStart: string,
   frequency: string,
-  timezone: string = DEFAULT_TIMEZONE
 ): Promise<number> {
   const [year, month, day] = periodStart.split('-').map(Number);
   const start = new Date(year, month - 1, day);
@@ -100,10 +86,7 @@ async function getMetricValueInPeriod(
     where: {
       memberId,
       metricId,
-      createdAt: {
-        gte: start,
-        lt: end,
-      },
+      createdAt: { gte: start, lt: end },
     },
   });
 
@@ -114,7 +97,6 @@ async function getMetricValueInPeriod(
  * Process streaks after a metric event.
  * Called by metrics.ts after recording a metric event.
  */
-// _eventValue is unused here — streaks aggregate via getMetricValueInPeriod over full periods
 export async function processStreaks(
   memberId: string,
   metricId: string,
@@ -122,12 +104,8 @@ export async function processStreaks(
 ): Promise<string[]> {
   const updatedStreakIds: string[] = [];
 
-  // Find all active streaks that track this metric
   const streaks = await db.streak.findMany({
-    where: {
-      metricId,
-      isActive: true,
-    },
+    where: { metricId, isActive: true },
   });
 
   const member = await db.member.findUnique({ where: { id: memberId } });
@@ -136,7 +114,6 @@ export async function processStreaks(
   for (const streak of streaks) {
     const currentPeriod = getCurrentPeriodStart(streak.frequency, timezone);
 
-    // Get or create MemberStreak
     let memberStreak = await db.memberStreak.findUnique({
       where: { memberId_streakId: { memberId, streakId: streak.id } },
     });
@@ -148,25 +125,14 @@ export async function processStreaks(
           streakId: streak.id,
           currentLength: 0,
           longestLength: 0,
-          freezesRemaining: streak.initialFreezes,
           status: 'active',
         },
       });
     }
 
-    // Calculate metric value for current period
-    const periodValue = await getMetricValueInPeriod(
-      memberId,
-      metricId,
-      currentPeriod,
-      streak.frequency,
-      timezone
-    );
+    const periodValue = await getMetricValueInPeriod(memberId, metricId, currentPeriod, streak.frequency);
 
-    // Did they meet the threshold for this period?
     if (periodValue < streak.threshold) continue;
-
-    // Already counted this period?
     if (memberStreak.lastCompletedPeriod === currentPeriod) continue;
 
     const previousPeriod = getPreviousPeriodStart(currentPeriod, streak.frequency);
@@ -175,7 +141,6 @@ export async function processStreaks(
       memberStreak.currentLength === 0;
 
     if (isConsecutive) {
-      // Extend the streak
       const newLength = memberStreak.currentLength + 1;
       const newLongest = Math.max(newLength, memberStreak.longestLength);
 
@@ -191,7 +156,8 @@ export async function processStreaks(
 
       updatedStreakIds.push(streak.id);
 
-      const streakEventType: 'streak.started' | 'streak.extended' = newLength === 1 ? 'streak.started' : 'streak.extended';
+      const streakEventType: 'streak.started' | 'streak.extended' =
+        newLength === 1 ? 'streak.started' : 'streak.extended';
       await recordEvent({
         eventType: streakEventType,
         memberId,
@@ -204,121 +170,47 @@ export async function processStreaks(
         },
       });
 
-      // Check if any streak achievements should unlock
       await checkStreakAchievements(memberId, streak.id, newLength);
-
-      // Accrue freezes if applicable
-      if (streak.freezeAccrualRate > 0 && streak.freezeAccrualDays > 0) {
-        if (newLength % streak.freezeAccrualDays === 0) {
-          const newFreezes = Math.min(
-            memberStreak.freezesRemaining + streak.freezeAccrualRate,
-            streak.maxFreezes
-          );
-          await db.memberStreak.update({
-            where: { id: memberStreak.id },
-            data: { freezesRemaining: newFreezes },
-          });
-
-          await recordEvent({
-            eventType: 'streak.freeze.earned',
-            memberId,
-            payload: {
-              streakId: streak.id,
-              freezesRemaining: newFreezes,
-            },
-          });
-        }
-      }
     } else if (memberStreak.lastCompletedPeriod !== null) {
-      // Gap detected — check if freeze can cover it
-      if (memberStreak.freezesRemaining > 0 && memberStreak.status === 'active') {
-        // Use a freeze to cover the gap
-        await db.memberStreak.update({
-          where: { id: memberStreak.id },
+      // Streak is broken — record history and reset
+      if (memberStreak.currentLength > 0) {
+        await db.streakHistory.create({
           data: {
-            currentLength: memberStreak.currentLength + 1,
-            longestLength: Math.max(
-              memberStreak.currentLength + 1,
-              memberStreak.longestLength
-            ),
-            lastCompletedPeriod: currentPeriod,
-            freezesRemaining: memberStreak.freezesRemaining - 1,
-            freezesUsed: memberStreak.freezesUsed + 1,
+            memberId,
+            streakId: streak.id,
+            length: memberStreak.currentLength,
+            startDate: memberStreak.startedAt,
+            endDate: new Date(),
           },
         });
 
-        updatedStreakIds.push(streak.id);
-
         await recordEvent({
-          eventType: 'streak.freeze.consumed',
+          eventType: 'streak.lost',
           memberId,
           payload: {
             streakId: streak.id,
-            freezesRemaining: memberStreak.freezesRemaining - 1,
+            lostLength: memberStreak.currentLength,
           },
         });
-      } else {
-        // Streak is broken — record history and reset
-        if (memberStreak.currentLength > 0) {
-          await db.streakHistory.create({
-            data: {
-              memberId,
-              streakId: streak.id,
-              length: memberStreak.currentLength,
-              startDate: memberStreak.startedAt,
-              endDate: new Date(),
-            },
-          });
-
-          await recordEvent({
-            eventType: 'streak.lost',
-            memberId,
-            payload: {
-              streakId: streak.id,
-              lostLength: memberStreak.currentLength,
-            },
-          });
-        }
-
-        // Reset and start fresh from current period
-        await db.memberStreak.update({
-          where: { id: memberStreak.id },
-          data: {
-            currentLength: 1,
-            lastCompletedPeriod: currentPeriod,
-            status: 'active',
-            startedAt: new Date(),
-            lostAt: null,
-            freezesRemaining: streak.initialFreezes,
-            freezesUsed: 0,
-          },
-        });
-
-        updatedStreakIds.push(streak.id);
       }
+
+      // Reset and start fresh from current period
+      await db.memberStreak.update({
+        where: { id: memberStreak.id },
+        data: {
+          currentLength: 1,
+          lastCompletedPeriod: currentPeriod,
+          status: 'active',
+          startedAt: new Date(),
+          lostAt: null,
+        },
+      });
+
+      updatedStreakIds.push(streak.id);
     }
   }
 
   return updatedStreakIds;
-}
-
-/**
- * Admin: grant freezes to a member's streak.
- */
-export async function grantFreezes(memberId: string, streakId: string, count: number) {
-  const memberStreak = await db.memberStreak.findUnique({
-    where: { memberId_streakId: { memberId, streakId } },
-    include: { streak: true },
-  });
-
-  if (!memberStreak) throw new Error('Member streak not found');
-
-  const newFreezes = Math.min(memberStreak.freezesRemaining + count, memberStreak.streak.maxFreezes);
-
-  return db.memberStreak.update({
-    where: { id: memberStreak.id },
-    data: { freezesRemaining: newFreezes },
-  });
 }
 
 /**
@@ -331,7 +223,6 @@ export async function restoreStreak(memberId: string, streakId: string) {
 
   if (!memberStreak) throw new Error('Member streak not found');
 
-  // Restore from the most recent history entry
   const lastHistory = await db.streakHistory.findFirst({
     where: { memberId, streakId },
     orderBy: { endDate: 'desc' },

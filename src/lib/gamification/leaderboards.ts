@@ -2,12 +2,8 @@ import { db } from '@/lib/db';
 
 /**
  * Leaderboard engine supporting metric-based, points-based, and streak-based rankings.
- * Supports both perpetual (never reset) and repeating (periodic reset) leaderboards.
  */
 
-/**
- * Get the score for a member on a specific leaderboard.
- */
 async function getScoreForMember(
   memberId: string,
   leaderboard: { rankingMethod: string; metricId: string | null; pointsConfigId: string | null; streakId: string | null }
@@ -16,36 +12,21 @@ async function getScoreForMember(
     case 'metric': {
       if (!leaderboard.metricId) return 0;
       const total = await db.memberMetricTotal.findUnique({
-        where: {
-          memberId_metricId: {
-            memberId,
-            metricId: leaderboard.metricId,
-          },
-        },
+        where: { memberId_metricId: { memberId, metricId: leaderboard.metricId } },
       });
       return total?.totalValue ?? 0;
     }
     case 'points': {
       if (!leaderboard.pointsConfigId) return 0;
       const mp = await db.memberPoints.findUnique({
-        where: {
-          memberId_pointsConfigId: {
-            memberId,
-            pointsConfigId: leaderboard.pointsConfigId,
-          },
-        },
+        where: { memberId_pointsConfigId: { memberId, pointsConfigId: leaderboard.pointsConfigId } },
       });
       return mp?.totalPoints ?? 0;
     }
     case 'streak': {
       if (!leaderboard.streakId) return 0;
       const ms = await db.memberStreak.findUnique({
-        where: {
-          memberId_streakId: {
-            memberId,
-            streakId: leaderboard.streakId,
-          },
-        },
+        where: { memberId_streakId: { memberId, streakId: leaderboard.streakId } },
       });
       return ms?.currentLength ?? 0;
     }
@@ -56,69 +37,48 @@ async function getScoreForMember(
 
 /**
  * Update all active leaderboards that a member participates in.
- * Called after metric events, achievement unlocks, streak updates, or points changes.
  */
 export async function updateLeaderboardsForMember(memberId: string): Promise<string[]> {
   const updatedLeaderboardIds: string[] = [];
 
   const leaderboards = await db.leaderboard.findMany({
-    where: {
-      status: 'active',
-      isActive: true,
-    },
+    where: { status: 'active', isActive: true },
   });
 
   for (const lb of leaderboards) {
     const score = await getScoreForMember(memberId, lb);
 
-    // Upsert the member's entry
     const existingEntry = await db.leaderboardEntry.findUnique({
-      where: {
-        leaderboardId_memberId_runNumber: {
-          leaderboardId: lb.id,
-          memberId,
-          runNumber: lb.currentRun,
-        },
-      },
+      where: { leaderboardId_memberId: { leaderboardId: lb.id, memberId } },
     });
 
     if (existingEntry) {
       await db.leaderboardEntry.update({
         where: { id: existingEntry.id },
-        data: { score, previousRank: existingEntry.rank },
+        data: { score },
       });
     } else {
-      // Only add if within participant limit
       const entryCount = await db.leaderboardEntry.count({
-        where: { leaderboardId: lb.id, runNumber: lb.currentRun },
+        where: { leaderboardId: lb.id },
       });
 
       if (entryCount < lb.participantLimit) {
         await db.leaderboardEntry.create({
-          data: {
-            leaderboardId: lb.id,
-            memberId,
-            runNumber: lb.currentRun,
-            score,
-          },
+          data: { leaderboardId: lb.id, memberId, score },
         });
       }
     }
 
-    // Recalculate ranks for this leaderboard
-    await recalculateRanks(lb.id, lb.currentRun);
+    await recalculateRanks(lb.id);
     updatedLeaderboardIds.push(lb.id);
   }
 
   return updatedLeaderboardIds;
 }
 
-/**
- * Recalculate ranks for a leaderboard run.
- */
-async function recalculateRanks(leaderboardId: string, runNumber: number) {
+async function recalculateRanks(leaderboardId: string) {
   const entries = await db.leaderboardEntry.findMany({
-    where: { leaderboardId, runNumber },
+    where: { leaderboardId },
     orderBy: { score: 'desc' },
   });
 
@@ -133,9 +93,6 @@ async function recalculateRanks(leaderboardId: string, runNumber: number) {
   }
 }
 
-/**
- * Get a leaderboard with its entries and member info.
- */
 export async function getLeaderboard(leaderboardId: string, limit = 100) {
   const leaderboard = await db.leaderboard.findUnique({
     where: { id: leaderboardId },
@@ -149,10 +106,7 @@ export async function getLeaderboard(leaderboardId: string, limit = 100) {
   if (!leaderboard) return null;
 
   const entries = await db.leaderboardEntry.findMany({
-    where: {
-      leaderboardId,
-      runNumber: leaderboard.currentRun,
-    },
+    where: { leaderboardId },
     orderBy: { rank: 'asc' },
     take: limit,
     include: {
@@ -172,23 +126,16 @@ export async function getLeaderboard(leaderboardId: string, limit = 100) {
     ...leaderboard,
     entries: entries.map((e) => ({
       rank: e.rank,
-      previousRank: e.previousRank,
-      rankChange: e.previousRank ? e.previousRank - e.rank : null,
       score: e.score,
       member: e.member,
     })),
   };
 }
 
-/**
- * Get a member's rank across all leaderboards.
- */
 export async function getMemberLeaderboards(memberId: string) {
   const entries = await db.leaderboardEntry.findMany({
     where: { memberId },
-    include: {
-      leaderboard: true,
-    },
+    include: { leaderboard: true },
     orderBy: { rank: 'asc' },
   });
 
@@ -197,17 +144,11 @@ export async function getMemberLeaderboards(memberId: string) {
     leaderboardName: e.leaderboard.name,
     leaderboardNameAr: e.leaderboard.nameAr,
     rank: e.rank,
-    previousRank: e.previousRank,
-    rankChange: e.previousRank ? e.previousRank - e.rank : null,
     score: e.score,
-    type: e.leaderboard.type,
     rankingMethod: e.leaderboard.rankingMethod,
   }));
 }
 
-/**
- * Get all active leaderboards.
- */
 export async function getActiveLeaderboards() {
   return db.leaderboard.findMany({
     where: {

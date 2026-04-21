@@ -7,29 +7,36 @@ import { useRouter } from 'next/navigation'
 import ThemeToggle from '@/components/ThemeToggle'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function SignInPage() {
   const router = useRouter()
+  const { signIn } = useAuth()
   const [userType, setUserType] = useState<'admin' | 'member' | null>(null)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleSignIn = async (type: 'admin' | 'member') => {
+    if (!email || !password) return
     setLoading(true)
-    setTimeout(() => {
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem('userType', type)
-        sessionStorage.setItem('isAuthenticated', 'true')
-        sessionStorage.setItem('userName', email)
-      }
-      if (type === 'admin') {
-        router.push('/admin/dashboard')
-      } else {
-        router.push('/member')
-      }
+    setError(null)
+
+    const result = await signIn(type, email, password)
+
+    if (result.error) {
+      setError(result.error)
       setLoading(false)
-    }, 1000)
+      return
+    }
+
+    if (type === 'admin') {
+      router.push('/admin/dashboard')
+    } else {
+      router.push('/member')
+    }
+    setLoading(false)
   }
 
   return (
@@ -68,6 +75,12 @@ export default function SignInPage() {
           transition={{ duration: 0.5 }}
           className="w-full max-w-4xl mx-auto"
         >
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-700 dark:text-red-400 text-center">
+              {error}
+            </div>
+          )}
+
           <div className="grid md:grid-cols-2 gap-8">
             <motion.div
               initial={{ opacity: 0, x: -30 }}
@@ -76,8 +89,8 @@ export default function SignInPage() {
               whileHover={{ scale: 1.02 }}
               onClick={() => setUserType('admin')}
               className={`relative overflow-hidden rounded-3xl p-8 cursor-pointer transition-all ${
-                userType === 'admin' 
-                  ? 'bg-gradient-to-br from-[#2E2973] to-[#1f1b4d] text-white shadow-2xl border-4 border-[#E04511]' 
+                userType === 'admin'
+                  ? 'bg-gradient-to-br from-[#2E2973] to-[#1f1b4d] text-white shadow-2xl border-4 border-[#E04511]'
                   : 'bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 hover:border-[#E04511] hover:shadow-xl'
               }`}
             >
@@ -129,10 +142,10 @@ export default function SignInPage() {
 
                 <Button
                   onClick={() => handleSignIn('admin')}
-                  disabled={loading || !email || !password}
-                  className="w-full bg-white text-[#2E2973] hover:bg-gray-100 font-bold py-6"
+                  disabled={loading || !email || !password || userType !== 'admin'}
+                  className="w-full bg-white text-[#2E2973] hover:bg-gray-100 font-bold py-6 mt-4"
                 >
-                  {loading ? 'جاري تسجيل الدخول...' : 'دخول لوحة التحكم'}
+                  {loading && userType === 'admin' ? 'جاري تسجيل الدخول...' : 'دخول لوحة التحكم'}
                 </Button>
               </div>
             </motion.div>
@@ -144,8 +157,8 @@ export default function SignInPage() {
               whileHover={{ scale: 1.02 }}
               onClick={() => setUserType('member')}
               className={`relative overflow-hidden rounded-3xl p-8 cursor-pointer transition-all ${
-                userType === 'member' 
-                  ? 'bg-gradient-to-br from-[#E04511] to-[#c43a0e] text-white shadow-2xl border-4 border-[#2E2973]' 
+                userType === 'member'
+                  ? 'bg-gradient-to-br from-[#E04511] to-[#c43a0e] text-white shadow-2xl border-4 border-[#2E2973]'
                   : 'bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 hover:border-[#2E2973] hover:shadow-xl'
               }`}
             >
@@ -197,10 +210,10 @@ export default function SignInPage() {
 
                 <Button
                   onClick={() => handleSignIn('member')}
-                  disabled={loading || !email || !password}
-                  className="w-full bg-white text-[#E04511] hover:bg-gray-100 font-bold py-6"
+                  disabled={loading || !email || !password || userType !== 'member'}
+                  className="w-full bg-white text-[#E04511] hover:bg-gray-100 font-bold py-6 mt-4"
                 >
-                  {loading ? 'جاري تسجيل الدخول...' : 'دخول بوابتي'}
+                  {loading && userType === 'member' ? 'جاري تسجيل الدخول...' : 'دخول بوابتي'}
                 </Button>
               </div>
             </motion.div>

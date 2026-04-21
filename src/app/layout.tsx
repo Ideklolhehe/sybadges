@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { SessionProvider } from "next-auth/react";
 
 const tajawal = Tajawal({
   variable: "--font-tajawal",
@@ -34,12 +35,14 @@ export default function RootLayout({
       <body
         className={`${tajawal.variable} ${cairo.variable} antialiased bg-background text-foreground`}
       >
-        <AuthProvider>
-          <ThemeProvider>
-            {children}
-          </ThemeProvider>
-          <Toaster />
-        </AuthProvider>
+        <SessionProvider>
+          <AuthProvider>
+            <ThemeProvider>
+              {children}
+            </ThemeProvider>
+            <Toaster />
+          </AuthProvider>
+        </SessionProvider>
       </body>
     </html>
   );

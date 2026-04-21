@@ -1,34 +1,64 @@
-# 🏆 Sybadges — Youth Achievement Portal
+# 🏆 Sybadges — بوابة إنجازات ناشئة الشارقة
 
-A gamified youth achievement tracking platform for **ناشئة الشارقة** (Sharjah Youth). Members earn digital badges, build streaks, climb leaderboards, and share success stories — all through a trophy-inspired gamification system.
+**Achievement & Badge Management Portal** for Sharjah Youth (ناشئة الشارقة).
 
-## ✨ Features
+A digital portal for managing member achievements, issuing badges, tracking approvals, and showcasing success stories.
 
-- **🏅 Digital Badges** — Bronze, silver, gold, and platinum badges awarded manually or automatically via metrics, streaks, or composite prerequisites
-- **📊 Metrics & Events** — Track activities (workshops, volunteering hours, books read, etc.) with a flexible event-driven metrics engine
-- **🔥 Streaks** — Daily/weekly/monthly streak tracking with freeze mechanics to keep members engaged
-- **🏆 Leaderboards** — Perpetual and repeating leaderboards ranked by metrics, points, or streaks
-- **⭐ Points & Levels** — Configurable point systems with triggers, boosts, and tiered levels
-- **📖 Success Stories** — Showcase featured member stories with bilingual (Arabic/English) support
-- **🔔 Notifications** — Templated in-app and email notifications for achievements, streak reminders, recaps, and reactivation
-- **🔗 Webhooks** — Subscribe external systems to platform events with signed deliveries and retries
-- **🌙 Dark Mode** — Built-in theme toggle
-- **🌍 RTL & Arabic-first** — Full Arabic UI with right-to-left layout
+---
+
+## ✅ Currently Implemented (v1)
+
+| Module | Status |
+|--------|--------|
+| Admin authentication (NextAuth credentials) | ✅ |
+| Member records & profiles | ✅ |
+| Badge catalog (CRUD) | ✅ |
+| Achievement requests & approval workflow | ✅ |
+| Success stories | ✅ |
+| Admin dashboard & member management | ✅ |
+| Arabic-first UI with RTL layout | ✅ |
+| Dark mode support | ✅ |
+| Metrics engine (event-driven activity tracking) | ✅ |
+| Streaks (consecutive period tracking) | ✅ |
+| Points & levels (configurable) | ✅ |
+| Leaderboards (metric/points/streak-based) | ✅ |
+| Event/audit log | ✅ |
+
+---
+
+## 🔜 Planned (v2+)
+
+- Email notifications
+- Webhook integrations with external systems
+- Advanced analytics & reporting
+- Member self-registration portal
+- Public badge verification
+
+---
+
+## ❌ Out of Scope for v1
+
+- Points boosts / seasonal multipliers
+- Streak freeze mechanics
+- Repeating/resetting leaderboards with run history
+- A/B experimentation flags
+- Notification templates & email delivery
+- Webhook delivery infrastructure
+
+---
 
 ## 🛠️ Tech Stack
 
 | Layer | Technology |
 |---|---|
-| Framework | Next.js 15 (App Router, standalone output) |
+| Framework | Next.js 15 (App Router) |
 | Language | TypeScript 5 |
 | Styling | Tailwind CSS 4, shadcn/ui, Framer Motion |
-| Database | SQLite via Prisma ORM (migration-ready for PostgreSQL) |
-| Auth | NextAuth.js |
-| State | Zustand, TanStack Query |
-| Tables & Charts | TanStack Table, Recharts |
-| Forms | React Hook Form + Zod |
-| i18n | Next Intl |
+| Database | SQLite via Prisma ORM |
+| Auth | NextAuth.js (credentials) |
 | Runtime | Bun |
+
+---
 
 ## 🚀 Quick Start
 
@@ -42,27 +72,27 @@ bun run db:push
 # Generate the Prisma client
 bun run db:generate
 
+# Seed with demo data (creates admin@sharjah.youth / admin123)
+bun run db:seed
+
 # Start the development server
 bun run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) to view the application.
 
+> ⚠️ Change the default admin password immediately after first login.
+
 ### Other Commands
 
 ```bash
-# Build for production
-bun run build
-
-# Start the production server
-bun start
-
-# Run ESLint
-bun run lint
-
-# Run database migrations
-bun run db:migrate
+bun run build       # Build for production
+bun start           # Start production server
+bun run lint        # Run ESLint
+bun run db:migrate  # Run database migrations
 ```
+
+---
 
 ## 📁 Project Structure
 
@@ -70,38 +100,72 @@ bun run db:migrate
 src/
 ├── app/
 │   ├── page.tsx              # Public landing page (success stories)
-│   ├── signin/               # Sign-in page
+│   ├── signin/               # Sign-in page (admin + member)
 │   ├── admin/                # Admin dashboard
 │   │   ├── dashboard/        # Overview & stats
 │   │   ├── members/          # Member management
 │   │   ├── approvals/        # Badge approval workflow
+│   │   ├── badges/           # Badge catalog management
 │   │   ├── metrics/          # Metrics configuration
-│   │   ├── points/           # Points & levels setup
 │   │   ├── streaks/          # Streak definitions
+│   │   ├── points/           # Points & levels setup
 │   │   └── leaderboards/     # Leaderboard management
 │   ├── member/               # Member portal
-│   │   ├── achievements/     # View earned badges
-│   │   ├── badges/           # Browse available badges
-│   │   ├── streaks/          # Track personal streaks
-│   │   ├── leaderboards/     # View rankings
-│   │   └── profile/          # Member profile
+│   │   ├── page.tsx          # Member dashboard
+│   │   ├── badges/           # Earned badges
+│   │   ├── achievements/     # Achievement requests
+│   │   ├── streaks/          # Personal streaks
+│   │   ├── profile/          # Member profile
+│   │   └── leaderboards/     # Leaderboard rankings
 │   └── api/                  # REST API routes
-│       ├── members/
-│       ├── badges/
-│       ├── achievements/
-│       ├── metrics/
-│       ├── events/
-│       ├── points/
-│       ├── streaks/
-│       ├── leaderboards/
-│       └── success-stories/
-├── components/               # Reusable React components
-│   └── ui/                   # shadcn/ui primitives
-├── contexts/                 # React context providers (Auth, Theme)
-├── hooks/                    # Custom React hooks
-└── lib/                      # Utilities & configurations
+├── lib/
+│   ├── db.ts                 # Prisma client
+│   ├── seed.ts               # Database seed script
+│   └── gamification/         # Points, streaks, leaderboards engine
+└── contexts/
+    ├── AuthContext.tsx        # NextAuth session wrapper
+    └── ThemeContext.tsx       # Dark/light mode
 ```
 
-## 📄 License
+---
 
-This project is private.
+## 👤 User Roles
+
+| Role | Description | Access |
+|------|-------------|--------|
+| Admin | System administrator | Full access — member management, badge catalog, approvals |
+| Approver | Program staff | Approve/reject achievement requests |
+| Member | Youth participant | View own profile, request achievements, view leaderboards |
+| Public | Unauthenticated visitor | View success stories on landing page |
+
+---
+
+## 🏅 Achievement Lifecycle
+
+```
+Member requests → Pending → Admin reviews → Approved / Rejected
+```
+
+- `pending` — submitted by member or created by admin
+- `approved` — verified and badge awarded
+- `rejected` — denied with reason
+
+---
+
+## 🗄️ Data Model Summary
+
+**Core models:** Admin, Member, Badge, Achievement, SuccessStory, Photo
+
+**Gamification (v1):** Metric, MetricEvent, MemberMetricTotal, Streak, MemberStreak, StreakHistory, PointsConfig, PointsTrigger, PointsLevel, MemberPoints, Leaderboard, LeaderboardEntry
+
+**System:** EventStore (audit log), SystemLock
+
+---
+
+## ⚠️ Known Limitations
+
+- No real password hashing — passwords stored as plain text (must add bcrypt before production)
+- Member auth uses memberId/email lookup without a dedicated password field — needs password field added to `Member` model for production
+- No rate limiting on API routes
+- No file upload infrastructure for badge icons and photos (field exists, upload not wired)
+- Mock data still used on the public landing page (`src/app/page.tsx`) — needs migration to DB-driven success stories

@@ -19,10 +19,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       name, nameAr, description, descriptionAr,
-      type, rankingMethod,
+      rankingMethod,
       metricId, pointsConfigId, streakId,
-      resetIntervalDays, participantLimit,
-      startDate, endDate,
+      participantLimit,
     } = body;
 
     if (!name || !nameAr || !rankingMethod) {
@@ -38,15 +37,11 @@ export async function POST(request: NextRequest) {
         nameAr,
         description: description ?? '',
         descriptionAr: descriptionAr ?? '',
-        type: type ?? 'perpetual',
         rankingMethod,
         metricId: metricId ?? null,
         pointsConfigId: pointsConfigId ?? null,
         streakId: streakId ?? null,
-        resetIntervalDays: resetIntervalDays ?? null,
         participantLimit: participantLimit ?? 100,
-        startDate: startDate ? new Date(startDate) : null,
-        endDate: endDate ? new Date(endDate) : null,
         status: 'active',
       },
     });
