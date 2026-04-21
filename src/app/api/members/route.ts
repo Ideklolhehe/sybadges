@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { recordEvent } from '@/lib/gamification/event-store';
 
 // GET all members
 export async function GET() {
@@ -30,7 +29,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { memberId, name, email, phone, dateOfBirth, photo } = body;
 
-    // Check if member ID already exists
     const existingMember = await db.member.findUnique({
       where: { memberId }
     });
@@ -51,13 +49,6 @@ export async function POST(request: NextRequest) {
         dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
         photo
       }
-    });
-
-    // Record member.created event (triggers webhook dispatch)
-    await recordEvent({
-      eventType: 'member.created',
-      memberId: member.id,
-      payload: { memberId: member.memberId, name: member.name },
     });
 
     return NextResponse.json(member, { status: 201 });
