@@ -225,6 +225,7 @@ model EventStore {
   @@index([eventType])
   @@index([memberId])
   @@index([createdAt])
+  @@index([processed, createdAt])
 }
 
 // ─── STREAKS ─────────────────────────────────────────────────────
@@ -275,6 +276,7 @@ model MemberStreak {
   streak   Streak @relation(fields: [streakId], references: [id], onDelete: Cascade)
 
   @@unique([memberId, streakId])
+  @@index([memberId, status])
 }
 
 model StreakHistory {
@@ -471,6 +473,7 @@ model NotificationLog {
   template   NotificationTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
   @@index([memberId, status])
+  @@index([memberId, status, createdAt])
   @@index([createdAt])
 }
 

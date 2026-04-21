@@ -122,14 +122,18 @@ async function recalculateRanks(leaderboardId: string, runNumber: number) {
     orderBy: { score: 'desc' },
   });
 
-  for (let i = 0; i < entries.length; i++) {
-    const newRank = i + 1;
-    if (entries[i].rank !== newRank) {
-      await db.leaderboardEntry.update({
-        where: { id: entries[i].id },
+  const updates = entries
+    .map((entry, i) => ({ entry, newRank: i + 1 }))
+    .filter(({ entry, newRank }) => entry.rank !== newRank)
+    .map(({ entry, newRank }) =>
+      db.leaderboardEntry.update({
+        where: { id: entry.id },
         data: { rank: newRank },
-      });
-    }
+      })
+    );
+
+  if (updates.length > 0) {
+    await db.$transaction(updates);
   }
 }
 

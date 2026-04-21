@@ -96,18 +96,16 @@ async function getMetricValueInPeriod(
       end = new Date(year, month - 1, day + 1);
   }
 
-  const events = await db.metricEvent.findMany({
+  const result = await db.metricEvent.aggregate({
+    _sum: { value: true },
     where: {
       memberId,
       metricId,
-      createdAt: {
-        gte: start,
-        lt: end,
-      },
+      createdAt: { gte: start, lt: end },
     },
   });
 
-  return events.reduce((sum, e) => sum + e.value, 0);
+  return result._sum.value ?? 0;
 }
 
 /**
