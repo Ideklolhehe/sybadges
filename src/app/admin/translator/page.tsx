@@ -16,7 +16,6 @@ const LANGUAGE_EXTENSIONS: Record<Language, string> = {
   typescript: 'ts',
   java: 'java',
   cpp: 'cpp',
-  go: 'go',
 }
 
 // ─── Placeholder examples ─────────────────────────────────────────────────────

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { translate } from '@/lib/translator';
 import type { Language } from '@/lib/translator';
 
-const SUPPORTED_LANGUAGES: Language[] = ['python', 'javascript', 'typescript', 'java', 'cpp', 'go'];
+const SUPPORTED_LANGUAGES: Language[] = ['python', 'javascript', 'typescript', 'java', 'cpp'];
 
 export async function POST(request: NextRequest) {
   try {

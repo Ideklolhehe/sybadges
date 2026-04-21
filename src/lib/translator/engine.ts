@@ -221,7 +221,7 @@ function transformFunctionHeaders(code: string, sourceLang: Language, targetLang
         const defMatch = line.match(/^(\s*)def\s+(\w+)\s*\(\s*(?:self,?\s*)?([^)]*)\)\s*(?:\{|:)/);
         if (defMatch) {
           const [, indent, name, params] = defMatch;
-          const cleanParams = params.replace(/\s*=\s*[^,)]+/g, (m) => m); // keep defaults
+          const cleanParams = params; // defaults are preserved as-is from the Python source
           if (targetLang === 'typescript') {
             const typedParams = cleanParams
               .split(',')
@@ -279,8 +279,16 @@ function transformFunctionHeaders(code: string, sourceLang: Language, targetLang
   }
 
   if (sourceLang === 'python' && targetLang === 'java') {
+    let lastClassName = 'Main';
     return lines
       .map((line) => {
+        const classMatch = line.match(/^(\s*)class\s+(\w+)(?:\s*\([^)]*\))?\s*(?:\{|:)/);
+        if (classMatch) {
+          const [, indent, name] = classMatch;
+          lastClassName = name;
+          return `${indent}public class ${name} {`;
+        }
+
         const defMatch = line.match(/^(\s*)def\s+(\w+)\s*\(\s*(?:self,?\s*)?([^)]*)\)\s*(?:\{|:)/);
         if (defMatch) {
           const [, indent, name, params] = defMatch;
@@ -290,17 +298,10 @@ function transformFunctionHeaders(code: string, sourceLang: Language, targetLang
             .filter(Boolean)
             .map((p) => `Object ${p.split('=')[0].trim()}`)
             .join(', ');
-          const returnType = name === '__init__' ? '' : 'public Object ';
           if (name === '__init__') {
-            return `${indent}public Constructor(${cleanParams}) {`;
+            return `${indent}public ${lastClassName}(${cleanParams}) {`;
           }
-          return `${indent}${returnType}${name}(${cleanParams}) {`;
-        }
-
-        const classMatch = line.match(/^(\s*)class\s+(\w+)(?:\s*\([^)]*\))?\s*(?:\{|:)/);
-        if (classMatch) {
-          const [, indent, name] = classMatch;
-          return `${indent}public class ${name} {`;
+          return `${indent}public Object ${name}(${cleanParams}) {`;
         }
 
         return line;

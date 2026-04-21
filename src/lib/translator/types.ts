@@ -1,6 +1,6 @@
 // ─── Supported languages ────────────────────────────────────────────────────
 
-export type Language = 'python' | 'javascript' | 'typescript' | 'java' | 'cpp' | 'go';
+export type Language = 'python' | 'javascript' | 'typescript' | 'java' | 'cpp';
 
 export const LANGUAGE_LABELS: Record<Language, string> = {
   python: 'Python',
@@ -8,7 +8,6 @@ export const LANGUAGE_LABELS: Record<Language, string> = {
   typescript: 'TypeScript',
   java: 'Java',
   cpp: 'C++',
-  go: 'Go',
 };
 
 // ─── Translation rule ────────────────────────────────────────────────────────

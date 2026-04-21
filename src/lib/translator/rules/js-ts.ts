@@ -38,15 +38,6 @@ export const jsToTsRules: TranslationRule[] = [
     pattern: /\((\w+)\)\s*=>/g,
     replacement: '($1: unknown) =>',
   },
-
-  // Add explicit any to untyped variable declarations
-  {
-    description: 'let x = ... → keep, no forced annotation (TS infers)',
-    // No change needed — TypeScript infers from initialiser.
-    // This is a no-op placeholder rule.
-    pattern: /(?!x)^$/g,
-    replacement: '',
-  },
 ];
 
 // ─── TypeScript → JavaScript ──────────────────────────────────────────────────
