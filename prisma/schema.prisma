@@ -290,7 +290,6 @@ model StreakHistory {
   streakId String
   streak   Streak @relation(fields: [streakId], references: [id], onDelete: Cascade)
 
-  @@index([memberId, streakId])
   @@index([memberId, streakId, endDate])
 }
 
@@ -349,7 +348,6 @@ model PointsLevel {
   pointsConfigId String
   pointsConfig   PointsConfig @relation(fields: [pointsConfigId], references: [id], onDelete: Cascade)
 
-  @@unique([pointsConfigId, order])
   @@index([pointsConfigId, order])
 }
 
@@ -436,7 +434,6 @@ model LeaderboardEntry {
   member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   @@unique([leaderboardId, memberId, runNumber])
-  @@index([leaderboardId, runNumber])
   @@index([leaderboardId, runNumber, score])
   @@index([memberId, rank])
   @@index([leaderboardId, runNumber, rank])
@@ -519,9 +516,8 @@ model WebhookDelivery {
 
   @@index([webhookId, status])
   @@index([webhookId, createdAt])
-  @@index([status, nextRetryAt, retryCount])
+  @@index([status, nextRetryAt])
   @@index([status, retryCount, createdAt])
-  @@index([nextRetryAt])
 }
 
 // ─── SYSTEM ─────────────────────────────────────────────────────
