@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Shield, Users, Award, BarChart3, Settings, ChevronRight, ChevronLeft, X, Activity, Flame, Star, Trophy, Webhook } from 'lucide-react'
+import { Shield, Users, Award, BarChart3, Settings, ChevronRight, ChevronLeft, X, Activity, Flame, Star, Trophy, Webhook, Code2 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useRouter } from 'next/navigation'
@@ -66,6 +66,12 @@ const navItems = [
     icon: Webhook,
     label: 'الويب هوك',
     labelEn: 'Webhooks'
+  },
+  {
+    href: '/admin/translator',
+    icon: Code2,
+    label: 'مترجم الكود',
+    labelEn: 'Code Translator'
   },
   {
     href: '/admin/settings',
