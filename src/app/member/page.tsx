@@ -40,6 +40,7 @@ export default function MemberHome() {
   const [points, setPoints] = useState<PointsData[]>([])
   const [streaks, setStreaks] = useState<StreakData[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -56,7 +57,11 @@ export default function MemberHome() {
       const session = await sessionRes.json()
       const memberId = session?.user?.memberId
 
-      if (!memberId) return
+      if (!memberId) {
+        setError('لم يتم العثور على بيانات العضوية. يرجى تسجيل الدخول مجدداً.')
+        setLoading(false)
+        return
+      }
 
       const membersRes = await fetch('/api/members')
       const members = await membersRes.json()
@@ -117,6 +122,14 @@ export default function MemberHome() {
             <div className="h-24 bg-gray-200 dark:bg-gray-700 rounded-lg" />
           </div>
         ))}
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="p-8 text-center">
+        <p className="text-red-600 dark:text-red-400 text-lg">{error}</p>
       </div>
     )
   }

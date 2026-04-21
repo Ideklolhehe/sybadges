@@ -1,5 +1,6 @@
 import NextAuth from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import bcrypt from 'bcryptjs';
 import { db } from '@/lib/db';
 
 const handler = NextAuth({
@@ -20,8 +21,8 @@ const handler = NextAuth({
 
         if (!admin) return null;
 
-        // Direct password comparison (passwords should be hashed in production)
-        if (admin.password !== credentials.password) return null;
+        const passwordMatch = await bcrypt.compare(credentials.password, admin.password);
+        if (!passwordMatch) return null;
 
         return { id: admin.id, name: admin.name, email: admin.email, role: 'admin' };
       },
@@ -45,10 +46,11 @@ const handler = NextAuth({
           },
         });
 
-        if (!member) return null;
+        if (!member || !member.password) return null;
 
-        // Members authenticate via memberId + simple PIN for now
-        // Replace with proper password field when ready
+        const passwordMatch = await bcrypt.compare(credentials.password, member.password);
+        if (!passwordMatch) return null;
+
         return {
           id: member.id,
           name: member.name,

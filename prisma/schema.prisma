@@ -33,6 +33,7 @@ model Member {
   photo           String?
   level           String   @default("bronze") // membership tier: bronze | silver | gold | platinum
   totalBadges     Int      @default(0)
+  password        String?  // hashed password (bcrypt); null = no portal access
   timezone        String   @default("Asia/Dubai")
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

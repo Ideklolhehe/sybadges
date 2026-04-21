@@ -164,8 +164,7 @@ Member requests → Pending → Admin reviews → Approved / Rejected
 
 ## ⚠️ Known Limitations
 
-- No real password hashing — passwords stored as plain text (must add bcrypt before production)
-- Member auth uses memberId/email lookup without a dedicated password field — needs password field added to `Member` model for production
+- Member auth requires a `password` field on the `Member` model — seeded members get a default password (`member123`); add a change-password flow before production
 - No rate limiting on API routes
 - No file upload infrastructure for badge icons and photos (field exists, upload not wired)
 - Mock data still used on the public landing page (`src/app/page.tsx`) — needs migration to DB-driven success stories

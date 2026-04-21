@@ -1,4 +1,5 @@
 import { db } from './db';
+import bcrypt from 'bcryptjs';
 
 /**
  * Seed the database with demo data for development and testing.
@@ -32,12 +33,13 @@ async function seed() {
 
   // Seed Members
   console.log('👥 Seeding members...');
+  const hashedMemberPassword = await bcrypt.hash('member123', 12);
   const memberData = [
-    { memberId: 'MEM001', name: 'أحمد محمد الشحي', email: 'ahmed@example.com', level: 'platinum', totalBadges: 25 },
-    { memberId: 'MEM002', name: 'فاطمة سالم البلوشي', email: 'fatima@example.com', level: 'gold', totalBadges: 18 },
-    { memberId: 'MEM003', name: 'محمد خميس الكعبي', email: 'mohammed@example.com', level: 'gold', totalBadges: 15 },
-    { memberId: 'MEM004', name: 'سارة محمد علي', email: 'sara@example.com', level: 'silver', totalBadges: 10 },
-    { memberId: 'MEM005', name: 'خالد عبدالله', email: 'khalid@example.com', level: 'platinum', totalBadges: 22 },
+    { memberId: 'MEM001', name: 'أحمد محمد الشحي', email: 'ahmed@example.com', level: 'platinum', totalBadges: 25, password: hashedMemberPassword },
+    { memberId: 'MEM002', name: 'فاطمة سالم البلوشي', email: 'fatima@example.com', level: 'gold', totalBadges: 18, password: hashedMemberPassword },
+    { memberId: 'MEM003', name: 'محمد خميس الكعبي', email: 'mohammed@example.com', level: 'gold', totalBadges: 15, password: hashedMemberPassword },
+    { memberId: 'MEM004', name: 'سارة محمد علي', email: 'sara@example.com', level: 'silver', totalBadges: 10, password: hashedMemberPassword },
+    { memberId: 'MEM005', name: 'خالد عبدالله', email: 'khalid@example.com', level: 'platinum', totalBadges: 22, password: hashedMemberPassword },
   ];
 
   const memberRecords: Record<string, { id: string }> = {};
@@ -162,13 +164,14 @@ async function seed() {
 
   // Seed Admin account
   console.log('🔐 Seeding admin account...');
+  const hashedAdminPassword = await bcrypt.hash('admin123', 12);
   const existingAdmin = await db.admin.findFirst({ where: { email: 'admin@sharjah.youth' } });
   if (!existingAdmin) {
     await db.admin.create({
       data: {
         name: 'مسؤول النظام',
         email: 'admin@sharjah.youth',
-        password: 'admin123', // change immediately after first login
+        password: hashedAdminPassword,
         role: 'admin',
       }
     });

@@ -19,7 +19,10 @@ export default function SignInPage() {
   const [error, setError] = useState<string | null>(null)
 
   const handleSignIn = async (type: 'admin' | 'member') => {
-    if (!email || !password) return
+    if (!email || !password) {
+      setError('يرجى إدخال البريد الإلكتروني وكلمة المرور')
+      return
+    }
     setLoading(true)
     setError(null)
 
