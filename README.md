@@ -167,4 +167,4 @@ Member requests → Pending → Admin reviews → Approved / Rejected
 - Member auth requires a `password` field on the `Member` model — seeded members get a default password (`member123`); add a change-password flow before production
 - No rate limiting on API routes
 - No file upload infrastructure for badge icons and photos (field exists, upload not wired)
-- Mock data still used on the public landing page (`src/app/page.tsx`) — needs migration to DB-driven success stories
+- Success stories on the public landing page require `centerId`/`trackId` fields to be set for center/track filtering to work — seed data populates these correctly

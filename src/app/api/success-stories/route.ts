@@ -6,10 +6,29 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const isFeatured = searchParams.get('isFeatured');
+    const centerId = searchParams.get('centerId');
+    const trackId = searchParams.get('trackId');
+    const statsOnly = searchParams.get('statsOnly');
 
-    const where: any = {};
+    const where: Record<string, unknown> = {};
     if (isFeatured !== null) {
       where.isFeatured = isFeatured === 'true';
+    }
+    if (centerId) {
+      where.centerId = centerId;
+    }
+    if (trackId) {
+      where.trackId = trackId;
+    }
+
+    if (statsOnly === 'true') {
+      const storyCount = await db.successStory.count({ where });
+      const stories = await db.successStory.findMany({
+        where,
+        select: { member: { select: { totalBadges: true } } },
+      });
+      const totalBadges = stories.reduce((sum, s) => sum + s.member.totalBadges, 0);
+      return NextResponse.json({ storyCount, totalBadges });
     }
 
     const stories = await db.successStory.findMany({
@@ -24,7 +43,7 @@ export async function GET(request: NextRequest) {
           }
         }
       },
-      orderBy: { isFeatured: 'desc' },
+      orderBy: [{ isFeatured: 'desc' }, { createdAt: 'desc' }],
     });
 
     return NextResponse.json(stories);
@@ -48,7 +67,13 @@ export async function POST(request: NextRequest) {
       content,
       contentAr,
       image,
-      isFeatured
+      isFeatured,
+      category,
+      categoryAr,
+      centerId,
+      centerAr,
+      trackId,
+      trackAr,
     } = body;
 
     const story = await db.successStory.create({
@@ -58,8 +83,14 @@ export async function POST(request: NextRequest) {
         titleAr,
         content,
         contentAr,
-        image,
-        isFeatured: isFeatured || false
+        image: image || null,
+        isFeatured: isFeatured || false,
+        category: category || null,
+        categoryAr: categoryAr || null,
+        centerId: centerId || null,
+        centerAr: centerAr || null,
+        trackId: trackId || null,
+        trackAr: trackAr || null,
       },
       include: {
         member: true

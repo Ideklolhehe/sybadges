@@ -1,7 +1,7 @@
 
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Sparkles, Award, TrendingUp, Heart, Users, Trophy, Search, Star, Calendar, LayoutDashboard, MapPin } from 'lucide-react'
 import ThemeToggle from '@/components/ThemeToggle'
@@ -21,151 +21,21 @@ interface SuccessStory {
   titleAr: string
   content: string
   contentAr: string
-  image: string
+  image: string | null
   isFeatured: boolean
-  category: string
-  categoryAr: string
-  centerId: string
-  centerAr: string
-  trackId: string
-  trackAr: string
-  date: string
+  category: string | null
+  categoryAr: string | null
+  centerId: string | null
+  centerAr: string | null
+  trackId: string | null
+  trackAr: string | null
+  createdAt: string
   member: {
     name: string
     level: string
     totalBadges: number
   }
 }
-
-const mockStories: SuccessStory[] = [
-  {
-    id: '1',
-    contentAr: 'رحلتي مع ناشئة الشارقة كانت رائعة. بدأت كعضو برونزي وعملت بجد للحصول على شارات متعددة واكتشفت شغفي بالقيادة وخدمة المجتمع.',
-    titleAr: "رحلتي في ناشئة الشارقة",
-    title: 'My Journey in Sharjah Youth',
-    content: 'My journey with Sharjah Youth was wonderful. I started as a bronze member and worked hard to earn multiple badges.',
-
-    image: '',
-    isFeatured: true,
-    category: 'leadership',
-    categoryAr: 'القيادة',
-    centerId: 'wasit',
-    centerAr: 'ناشئة وسط',
-    trackId: 'literature-languages',
-    trackAr: 'الآداب واللغات',
-    date: '2025-01-15',
-    member: {
-      name: 'أحمد محمد الشحي',
-      level: 'platinum',
-      totalBadges: 25
-    }
-  },
-  {
-    id: '2',
-    title: 'Leadership Excellence',
-    titleAr: 'التميز في القيادة',
-    content: 'Through badge system, I discovered my passion for leadership and community service...',
-    contentAr: 'من خلال نظام الشارات، اكتشفت شغفي بالقيادة وخدمة المجتمع، وقادت فرق شبابية متعددة في مشاريع ناجحة.',
-    image: '',
-    isFeatured: true,
-    category: 'community',
-    categoryAr: 'المجتمع',
-    centerId: 'al-dhaid',
-    centerAr: 'ناشئة الذيد',
-    trackId: 'life-skills',
-    trackAr: 'المهارات الحياتية',
-    date: '2025-01-10',
-    member: {
-      name: 'فاطمة سالم البلوشي',
-      level: 'gold',
-      totalBadges: 18
-    }
-  },
-  {
-    id: '3',
-    title: 'Innovation Champion',
-    titleAr: 'بطل الابتكار',
-    content: 'The technical badges inspired me to create solutions for real community problems...',
-    contentAr: 'شارات الابتكار ألهمتني لخلق حلول مبتكرة لمشاكل بيئية حقيقية في مجتمعي.',
-    image: '',
-    isFeatured: false,
-    category: 'innovation',
-    categoryAr: 'الابتكار',
-    centerId: 'wasit',
-    centerAr: 'ناشئة وسط',
-    trackId: 'science-technology',
-    trackAr: 'العلوم والتكنولوجيا',
-    date: '2025-01-05',
-    member: {
-      name: 'محمد خميس الكعبي',
-      level: 'gold',
-      totalBadges: 15
-    }
-  },
-  {
-    id: '4',
-    title: 'Community Hero',
-    titleAr: 'بطل المجتمع',
-    content: 'Volunteered over 200 hours helping elderly and organizing community events...',
-    contentAr: 'تطوعت أكثر من 200 ساعة في مساعدة كبار السن ونظمت فعاليات مجتمعية.',
-    image: '',
-    isFeatured: false,
-    category: 'community',
-    categoryAr: 'المجتمع',
-    centerId: 'mleiha',
-    centerAr: 'ناشئة مليحة',
-    trackId: 'life-skills',
-    trackAr: 'المهارات الحياتية',
-    date: '2025-01-03',
-    member: {
-      name: 'سارة محمد علي',
-      level: 'silver',
-      totalBadges: 10
-    }
-  },
-  {
-    id: '5',
-    title: 'Tech Pioneer',
-    titleAr: 'رائد التقنية',
-    content: 'Created an app to help members track their achievements and share stories...',
-    contentAr: 'أنشأت تطبيقاً لمساعدة الأعضاء على تتبع إنجازاتهم ومشاركة قصص نجاحهم.',
-    image: '',
-    isFeatured: false,
-    category: 'technical',
-    categoryAr: 'تقني',
-    centerId: 'kalba',
-    centerAr: 'ناشئة كلباء',
-    trackId: 'science-technology',
-    trackAr: 'العلوم والتكنولوجيا',
-    date: '2024-12-28',
-    member: {
-      name: 'خالد عبدالله',
-      level: 'platinum',
-      totalBadges: 22
-    }
-  },
-  {
-    id: '6',
-    title: 'Arts & Culture Ambassador',
-    titleAr: 'سفير الفنون والثقافة',
-    content: 'Organized cultural exhibitions and art workshops for youth...',
-    contentAr: 'نظمت معارض ثقافية وورش فنية للشباب في جميع أنحاء الإمارة.',
-    image: '',
-    isFeatured: false,
-    category: 'culture',
-    categoryAr: 'ثقافة',
-    centerId: 'wasit',
-    centerAr: 'ناشئة وسط',
-    trackId: 'arts',
-    trackAr: 'الفنون',
-    date: '2024-12-25',
-    member: {
-      name: 'مريم أحمد',
-      level: 'gold',
-      totalBadges: 14
-    }
-  },
-]
 
 const centers = [
   { id: 'all', name: 'جميع المراكز', nameEn: 'All Centers' },
@@ -206,22 +76,48 @@ const levelLabels: Record<string, string> = {
 
 export default function YouthAchievementPortal() {
   const router = useRouter()
+  const [stories, setStories] = useState<SuccessStory[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [stats, setStats] = useState({ storyCount: 0, totalBadges: 0 })
   const [searchTerm, setSearchTerm] = useState('')
   const [filterCenter, setFilterCenter] = useState('all')
   const [filterTrack, setFilterTrack] = useState('all')
 
-  const filteredStories = mockStories.filter(story => {
-    const matchesSearch = 
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [storiesRes, statsRes] = await Promise.all([
+          fetch('/api/success-stories'),
+          fetch('/api/success-stories?statsOnly=true'),
+        ])
+        if (!storiesRes.ok) throw new Error('فشل تحميل القصص')
+        const storiesData: SuccessStory[] = await storiesRes.json()
+        const statsData = statsRes.ok ? await statsRes.json() : { storyCount: storiesData.length, totalBadges: 0 }
+        setStories(storiesData)
+        setStats({ storyCount: statsData.storyCount ?? storiesData.length, totalBadges: statsData.totalBadges ?? 0 })
+      } catch (err) {
+        console.error('Error fetching stories:', err)
+        setError('تعذّر تحميل قصص النجاح. يرجى المحاولة لاحقاً.')
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [])
+
+  const filteredStories = stories.filter(story => {
+    const matchesSearch =
       story.titleAr.toLowerCase().includes(searchTerm.toLowerCase()) ||
       story.member.name.toLowerCase().includes(searchTerm.toLowerCase())
-    
+
     const matchesCenter = filterCenter === 'all' || story.centerId === filterCenter
     const matchesTrack = filterTrack === 'all' || story.trackId === filterTrack
-    
+
     return matchesSearch && matchesCenter && matchesTrack
   })
 
-  const featuredStory = mockStories.find(s => s.isFeatured)
+  const featuredStory = stories.find(s => s.isFeatured)
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900 transition-colors duration-300">
@@ -295,14 +191,12 @@ export default function YouthAchievementPortal() {
               <div className="flex gap-4">
                 <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-6 text-center min-w-[140px]">
                   <Users className="w-8 h-8 mx-auto mb-2" />
-                  <p className="text-3xl font-bold">{mockStories.length}</p>
+                  <p className="text-3xl font-bold">{stats.storyCount}</p>
                   <p className="text-sm opacity-80">قصة نجاح</p>
                 </div>
                 <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-6 text-center min-w-[140px]">
                   <Trophy className="w-8 h-8 mx-auto mb-2" />
-                  <p className="text-3xl font-bold">
-                    {mockStories.reduce((sum, s) => sum + s.member.totalBadges, 0)}
-                  </p>
+                  <p className="text-3xl font-bold">{stats.totalBadges}</p>
                   <p className="text-sm opacity-80">شارة كسبت</p>
                 </div>
               </div>
@@ -312,6 +206,23 @@ export default function YouthAchievementPortal() {
 
         {/* Main Content */}
         <div className="max-w-6xl mx-auto px-6 py-12">
+          {/* Loading state */}
+          {loading && (
+            <div className="flex justify-center items-center py-24">
+              <div className="w-12 h-12 border-4 border-[#2E2973] border-t-transparent rounded-full animate-spin" />
+            </div>
+          )}
+
+          {/* Error state */}
+          {error && !loading && (
+            <div className="py-16 text-center">
+              <Sparkles className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+              <p className="text-xl text-red-500">{error}</p>
+            </div>
+          )}
+
+          {!loading && !error && (
+            <>
           {/* Search and Filters */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -393,7 +304,7 @@ export default function YouthAchievementPortal() {
                       </div>
                       <div className="flex items-center gap-2">
                         <Calendar className="w-4 h-4 opacity-80" />
-                        <span className="text-sm opacity-80">{new Date(featuredStory.date).toLocaleDateString('ar-EG')}</span>
+                        <span className="text-sm opacity-80">{new Date(featuredStory.createdAt).toLocaleDateString('ar-EG')}</span>
                       </div>
                     </div>
                   </div>
@@ -481,6 +392,8 @@ export default function YouthAchievementPortal() {
               )}
             </div>
           </motion.div>
+            </>
+          )}
         </div>
       </div>
     </div>
