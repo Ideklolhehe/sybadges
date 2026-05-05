@@ -9,10 +9,6 @@ export async function GET() {
       include: {
         levels: { orderBy: { order: 'asc' } },
         triggers: { include: { metric: true, badge: true } },
-        boosts: {
-          where: { isActive: true },
-          orderBy: { startDate: 'desc' },
-        },
         _count: { select: { memberPoints: true } },
       },
       orderBy: { createdAt: 'desc' },

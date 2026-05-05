@@ -17,6 +17,7 @@ model Admin {
   email     String   @unique
   name      String
   password  String
+  role      String   @default("admin") // admin | approver | staff
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -30,28 +31,25 @@ model Member {
   dateOfBirth     DateTime?
   joinDate        DateTime @default(now())
   photo           String?
-  level           String   @default("bronze") // legacy level — kept for backward compat
+  level           String   @default("bronze") // membership tier: bronze | silver | gold | platinum
   totalBadges     Int      @default(0)
-  isControlGroup  Boolean  @default(false) // A/B experimentation: true = no gamification UI
+  password        String?  // hashed password (bcrypt); null = no portal access
   timezone        String   @default("Asia/Dubai")
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  achievements              Achievement[]
-  successStories            SuccessStory[]
-  photos                    Photo[]
-  metricEvents              MetricEvent[]
-  memberMetricTotals        MemberMetricTotal[]
-  memberStreaks             MemberStreak[]
-  streakHistories           StreakHistory[]
-  memberPoints              MemberPoints[]
-  leaderboardEntries        LeaderboardEntry[]
-  notificationLogs          NotificationLog[]
-  notificationPreferences   MemberNotificationPreference?
+  achievements       Achievement[]
+  successStories     SuccessStory[]
+  photos             Photo[]
+  metricEvents       MetricEvent[]
+  memberMetricTotals MemberMetricTotal[]
+  memberStreaks      MemberStreak[]
+  streakHistories    StreakHistory[]
+  memberPoints       MemberPoints[]
+  leaderboardEntries LeaderboardEntry[]
 
   @@index([createdAt])
   @@index([joinDate])
-  @@index([isControlGroup, createdAt])
 }
 
 // ─── BADGES & ACHIEVEMENTS (Enhanced) ─────────────────────────────
@@ -231,20 +229,16 @@ model EventStore {
 // ─── STREAKS ─────────────────────────────────────────────────────
 
 model Streak {
-  id               String  @id @default(cuid())
-  name             String
-  nameAr           String
-  description      String
-  descriptionAr    String
-  frequency        String  @default("daily") // daily | weekly | monthly
-  threshold        Float   @default(1) // minimum metric value per period
-  initialFreezes   Int     @default(0)
-  freezeAccrualRate Int    @default(0) // grant N freezes per freezeAccrualDays
-  freezeAccrualDays Int    @default(7)
-  maxFreezes       Int     @default(10)
-  isActive         Boolean @default(true)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id            String  @id @default(cuid())
+  name          String
+  nameAr        String
+  description   String
+  descriptionAr String
+  frequency     String  @default("daily") // daily | weekly | monthly
+  threshold     Float   @default(1) // minimum metric value per period
+  isActive      Boolean @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   metricId String
   metric   Metric @relation(fields: [metricId], references: [id], onDelete: Cascade)
@@ -262,8 +256,6 @@ model MemberStreak {
   currentLength        Int       @default(0)
   longestLength        Int       @default(0)
   lastCompletedPeriod  String?   // ISO date string of last completed period start
-  freezesRemaining     Int       @default(0)
-  freezesUsed          Int       @default(0)
   status               String    @default("active") // active | broken
   startedAt            DateTime  @default(now())
   lostAt               DateTime?
@@ -309,7 +301,6 @@ model PointsConfig {
 
   triggers     PointsTrigger[]
   levels       PointsLevel[]
-  boosts       PointsBoost[]
   memberPoints MemberPoints[]
   leaderboards Leaderboard[]
 
@@ -353,22 +344,7 @@ model PointsLevel {
   @@index([pointsConfigId, order])
 }
 
-model PointsBoost {
-  id         String    @id @default(cuid())
-  name       String
-  nameAr     String
-  multiplier Float     @default(2.0) // e.g., 2.0 = double points
-  startDate  DateTime
-  endDate    DateTime
-  isActive   Boolean   @default(true)
-  createdAt  DateTime  @default(now())
-
-  pointsConfigId String
-  pointsConfig   PointsConfig @relation(fields: [pointsConfigId], references: [id], onDelete: Cascade)
-
-  @@index([pointsConfigId, isActive, startDate, endDate])
-  @@index([isActive, startDate])
-}
+// ─── SYSTEM ─────────────────────────────────────────────────────
 
 model MemberPoints {
   id           String   @id @default(cuid())
@@ -394,14 +370,9 @@ model Leaderboard {
   nameAr           String
   description      String
   descriptionAr    String
-  type             String   @default("perpetual") // perpetual | repeating
   rankingMethod    String   @default("metric") // metric | points | streak
-  resetIntervalDays Int?    // for repeating leaderboards
   participantLimit Int      @default(100)
-  startDate        DateTime?
-  endDate          DateTime?
   status           String   @default("active") // inactive | scheduled | active | finished | archived
-  currentRun       Int      @default(1) // for repeating: increments on each reset
   isActive         Boolean  @default(true)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -422,12 +393,10 @@ model Leaderboard {
 }
 
 model LeaderboardEntry {
-  id           String   @id @default(cuid())
-  runNumber    Int      @default(1) // for repeating leaderboards
-  score        Float    @default(0)
-  rank         Int      @default(0)
-  previousRank Int?     // for rank change indicators
-  updatedAt    DateTime @updatedAt
+  id        String   @id @default(cuid())
+  score     Float    @default(0)
+  rank      Int      @default(0)
+  updatedAt DateTime @updatedAt
 
   leaderboardId String
   leaderboard   Leaderboard @relation(fields: [leaderboardId], references: [id], onDelete: Cascade)
@@ -435,92 +404,9 @@ model LeaderboardEntry {
   memberId String
   member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
-  @@unique([leaderboardId, memberId, runNumber])
-  @@index([leaderboardId, runNumber, score])
+  @@unique([leaderboardId, memberId])
+  @@index([leaderboardId, rank])
   @@index([memberId, rank])
-  @@index([leaderboardId, runNumber, rank])
-}
-
-// ─── NOTIFICATIONS ───────────────────────────────────────────────
-
-model NotificationTemplate {
-  id        String  @id @default(cuid())
-  type      String  @unique // achievement_completed | streak_reminder | recap | reactivation
-  subject   String
-  subjectAr String
-  body      String  // HTML template with {{variable}} placeholders
-  bodyAr    String
-  channel   String  @default("in_app") // in_app | email
-  isActive  Boolean @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  logs NotificationLog[]
-}
-
-model NotificationLog {
-  id     String @id @default(cuid())
-  channel String @default("in_app") // in_app | email
-  status  String @default("pending") // pending | sent | failed | read
-  sentAt  DateTime?
-  readAt  DateTime?
-  createdAt DateTime @default(now())
-
-  memberId String
-  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
-
-  templateId String
-  template   NotificationTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-
-  @@index([memberId, status])
-  @@index([memberId, status, createdAt])
-  @@index([createdAt])
-}
-
-model MemberNotificationPreference {
-  id                     String  @id @default(cuid())
-  achievementCompleted   Boolean @default(true)
-  streakReminder         Boolean @default(true)
-  recap                  Boolean @default(true)
-  reactivation           Boolean @default(true)
-
-  memberId String @unique
-  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
-}
-
-// ─── WEBHOOKS ────────────────────────────────────────────────────
-
-model Webhook {
-  id        String  @id @default(cuid())
-  url       String
-  secret    String  // HMAC-SHA256 signing secret
-  events    String  @default("[]") // JSON array of subscribed event types
-  isActive  Boolean @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  deliveries WebhookDelivery[]
-
-  @@index([isActive, createdAt])
-}
-
-model WebhookDelivery {
-  id           String    @id @default(cuid())
-  event        String    // event type that triggered this
-  payload      String    // JSON payload sent
-  status       String    @default("pending") // pending | delivered | failed | dead_letter
-  responseCode Int?
-  retryCount   Int       @default(0)
-  nextRetryAt  DateTime?
-  createdAt    DateTime  @default(now())
-
-  webhookId String
-  webhook   Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
-
-  @@index([webhookId, status])
-  @@index([webhookId, createdAt])
-  @@index([status, nextRetryAt])
-  @@index([status, retryCount, createdAt])
 }
 
 // ─── SYSTEM ─────────────────────────────────────────────────────

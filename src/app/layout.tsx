@@ -5,6 +5,7 @@ import "@fontsource/cairo/arabic.css";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { SessionProvider } from "next-auth/react";
 
 export const metadata: Metadata = {
   title: "ناشئة الشارقة - بوابة إنجازات الناشئة",
@@ -21,12 +22,14 @@ export default function RootLayout({
       <body
         className="antialiased bg-background text-foreground"
       >
-        <AuthProvider>
-          <ThemeProvider>
-            {children}
-          </ThemeProvider>
-          <Toaster />
-        </AuthProvider>
+        <SessionProvider>
+          <AuthProvider>
+            <ThemeProvider>
+              {children}
+            </ThemeProvider>
+            <Toaster />
+          </AuthProvider>
+        </SessionProvider>
       </body>
     </html>
   );

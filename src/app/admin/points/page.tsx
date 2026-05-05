@@ -11,7 +11,6 @@ interface PointsConfig {
   description: string
   levels: { id: string; threshold: number; name: string; nameAr: string; icon: string; color: string; order: number }[]
   triggers: { id: string; sourceType: string; pointsPerUnit: number; pointsFixed: number; metric?: { name: string; nameAr: string } | null; badge?: { name: string; nameAr: string } | null }[]
-  boosts: { id: string; name: string; multiplier: number; endDate: string }[]
   _count: { memberPoints: number }
 }
 
@@ -43,7 +42,7 @@ export default function AdminPoints() {
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
       <div className="mb-8">
         <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">النقاط والمستويات</h2>
-        <p className="text-gray-600 dark:text-gray-400">إدارة أنظمة النقاط والمستويات والمضاعفات</p>
+        <p className="text-gray-600 dark:text-gray-400">إدارة أنظمة النقاط والمستويات</p>
       </div>
 
       {configs.map((config) => (
@@ -77,7 +76,7 @@ export default function AdminPoints() {
           </div>
 
           {/* Triggers */}
-          <div className="mb-6">
+          <div>
             <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
               <Zap className="w-4 h-4" /> المحفزات
             </h4>
@@ -95,21 +94,6 @@ export default function AdminPoints() {
               ))}
             </div>
           </div>
-
-          {/* Active Boosts */}
-          {config.boosts.length > 0 && (
-            <div>
-              <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">🚀 المضاعفات النشطة</h4>
-              <div className="space-y-2">
-                {config.boosts.map((boost) => (
-                  <div key={boost.id} className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-xl text-sm">
-                    <span className="text-green-700 dark:text-green-400 font-semibold">{boost.name}</span>
-                    <span className="font-bold text-green-600">{boost.multiplier}x حتى {new Date(boost.endDate).toLocaleDateString('ar-EG')}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       ))}
     </motion.div>
