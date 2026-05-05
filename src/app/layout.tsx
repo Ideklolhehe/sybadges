@@ -19,7 +19,7 @@ export default function RootLayout({
   return (
     <html lang="ar" dir="rtl" suppressHydrationWarning>
       <body
-        className={`antialiased bg-background text-foreground`}
+        className="antialiased bg-background text-foreground"
       >
         <AuthProvider>
           <ThemeProvider>
