@@ -47,6 +47,9 @@ model Member {
   streakHistories    StreakHistory[]
   memberPoints       MemberPoints[]
   leaderboardEntries LeaderboardEntry[]
+
+  @@index([createdAt])
+  @@index([joinDate])
 }
 
 // ─── BADGES & ACHIEVEMENTS (Enhanced) ─────────────────────────────
@@ -76,6 +79,9 @@ model Badge {
   prerequisiteParents      AchievementPrerequisite[] @relation("ParentAchievement")
   prerequisiteChildren     AchievementPrerequisite[] @relation("ChildAchievement")
   pointsTriggers           PointsTrigger[]
+
+  @@index([isActive, triggerType, isAutomatic])
+  @@index([level])
 }
 
 model Achievement {
@@ -97,6 +103,11 @@ model Achievement {
 
   badgeId String
   badge   Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@index([memberId, createdAt])
+  @@index([status, createdAt])
+  @@index([memberId, status])
+  @@index([badgeId, status])
 }
 
 model AchievementPrerequisite {
@@ -107,6 +118,9 @@ model AchievementPrerequisite {
 
   parentBadge Badge @relation("ParentAchievement", fields: [parentAchievementId], references: [id], onDelete: Cascade)
   childBadge  Badge @relation("ChildAchievement", fields: [childAchievementId], references: [id], onDelete: Cascade)
+
+  @@unique([parentAchievementId, childAchievementId])
+  @@index([childAchievementId])
 }
 
 // ─── SUCCESS STORIES & PHOTOS ─────────────────────────────────────
@@ -124,6 +138,9 @@ model SuccessStory {
 
   memberId String
   member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([isFeatured, createdAt])
+  @@index([memberId, createdAt])
 }
 
 model Photo {
@@ -135,6 +152,8 @@ model Photo {
 
   memberId String
   member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId, createdAt])
 }
 
 // ─── METRICS & EVENTS ENGINE (Phase 1 Foundation) ─────────────────
@@ -155,6 +174,8 @@ model Metric {
   streaks            Streak[]
   pointsTriggers     PointsTrigger[]
   leaderboards       Leaderboard[]
+
+  @@index([isActive, name])
 }
 
 model MetricEvent {
@@ -171,6 +192,8 @@ model MetricEvent {
   metric   Metric @relation(fields: [metricId], references: [id], onDelete: Cascade)
 
   @@index([memberId, metricId])
+  @@index([memberId, createdAt])
+  @@index([metricId, createdAt])
   @@index([createdAt])
 }
 
@@ -200,6 +223,7 @@ model EventStore {
   @@index([eventType])
   @@index([memberId])
   @@index([createdAt])
+  @@index([processed, createdAt])
 }
 
 // ─── STREAKS ─────────────────────────────────────────────────────
@@ -222,6 +246,9 @@ model Streak {
   memberStreaks  MemberStreak[]
   histories      StreakHistory[]
   leaderboards   Leaderboard[]
+
+  @@index([metricId, isActive])
+  @@index([isActive, createdAt])
 }
 
 model MemberStreak {
@@ -241,6 +268,7 @@ model MemberStreak {
   streak   Streak @relation(fields: [streakId], references: [id], onDelete: Cascade)
 
   @@unique([memberId, streakId])
+  @@index([memberId, status])
 }
 
 model StreakHistory {
@@ -256,7 +284,7 @@ model StreakHistory {
   streakId String
   streak   Streak @relation(fields: [streakId], references: [id], onDelete: Cascade)
 
-  @@index([memberId, streakId])
+  @@index([memberId, streakId, endDate])
 }
 
 // ─── POINTS & LEVELS ─────────────────────────────────────────────
@@ -275,6 +303,8 @@ model PointsConfig {
   levels       PointsLevel[]
   memberPoints MemberPoints[]
   leaderboards Leaderboard[]
+
+  @@index([isActive, createdAt])
 }
 
 model PointsTrigger {
@@ -293,6 +323,10 @@ model PointsTrigger {
 
   badgeId String?
   badge   Badge? @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@index([sourceType, metricId, isActive])
+  @@index([sourceType, badgeId, isActive])
+  @@index([pointsConfigId, isActive])
 }
 
 model PointsLevel {
@@ -325,6 +359,7 @@ model MemberPoints {
   pointsConfig   PointsConfig @relation(fields: [pointsConfigId], references: [id], onDelete: Cascade)
 
   @@unique([memberId, pointsConfigId])
+  @@index([pointsConfigId, totalPoints])
 }
 
 // ─── LEADERBOARDS ────────────────────────────────────────────────
@@ -353,6 +388,8 @@ model Leaderboard {
   streak         Streak?       @relation(fields: [streakId], references: [id], onDelete: Cascade)
 
   entries LeaderboardEntry[]
+
+  @@index([isActive, status, createdAt])
 }
 
 model LeaderboardEntry {
@@ -369,6 +406,7 @@ model LeaderboardEntry {
 
   @@unique([leaderboardId, memberId])
   @@index([leaderboardId, rank])
+  @@index([memberId, rank])
 }
 
 // ─── SYSTEM ─────────────────────────────────────────────────────
