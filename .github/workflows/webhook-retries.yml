@@ -1,9 +1,7 @@
 name: Webhook Retry Dispatcher
 
 on:
-  schedule:
-    - cron: '*/5 * * * *' # Every 5 minutes
-  workflow_dispatch: # Manual trigger for testing/forced retries
+  workflow_dispatch: # Manual trigger only (schedule deactivated)
 
 jobs:
   dispatch-retries:
