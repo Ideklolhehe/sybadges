@@ -47,3 +47,7 @@ test
 prompt
 
 server.log
+__pycache__/
+*.pyc
+*.bak
+workspace-*.tar
