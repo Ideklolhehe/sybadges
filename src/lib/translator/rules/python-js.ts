@@ -250,22 +250,22 @@ export const pythonToJsRules: TranslationRule[] = [
   // Exception handling
   {
     description: 'except Exception as e → catch (e)',
-    pattern: /\bexcept\s+(\w+)\s+as\s+(\w+)\s*:/g,
+    pattern: /\bexcept\s+(\w+)\s+as\s+(\w+)\s*(?::|\{)/g,
     replacement: 'catch ($2) {  // $1',
   },
   {
     description: 'except → catch (e)',
-    pattern: /\bexcept\s*:/g,
+    pattern: /\bexcept\s*(?::|\{)/g,
     replacement: 'catch (e) {',
   },
   {
     description: 'try: → try {',
-    pattern: /^\s*try\s*:/gm,
-    replacement: (m: string) => m.replace('try:', 'try {'),
+    pattern: /^\s*try\s*(?::|\{)/gm,
+    replacement: (m: string) => m.replace(/try\s*(?::|\{)/, 'try {'),
   },
   {
     description: 'finally: → } finally {',
-    pattern: /\bfinally\s*:/g,
+    pattern: /\bfinally\s*(?::|\{)/g,
     replacement: '} finally {',
   },
   {
