@@ -60,13 +60,21 @@ export const pythonToJavaRules: TranslationRule[] = [
   { description: 'pass → // pass', pattern: /^\s*pass\s*$/gm, replacement: '    // pass' },
 
   // Exception handling
+  // Note: convertIndentToBlocks runs before these rules, converting `except X as e:`
+  // and `finally:` headers to brace form. Patterns match the brace form and absorb
+  // the preceding `}` that closes the try/catch block.
   {
-    description: 'except Exception as e → catch (Exception e)',
-    pattern: /\bexcept\s+(\w+)\s+as\s+(\w+)\s*:/g,
-    replacement: 'catch ($1 $2) {',
+    description: 'except Exception as e { (brace form) → } catch (Exception e) {',
+    pattern: /\}\s*\n(\s*)except\s+(\w+)\s+as\s+(\w+)\s*\{/g,
+    replacement: (_m: string, indent: string, excType: string, excVar: string) =>
+      `${indent}} catch (${excType} ${excVar}) {`,
   },
-  { description: 'except → catch (Exception e)', pattern: /\bexcept\s*:/g, replacement: 'catch (Exception e) {' },
-  { description: 'finally: → } finally {', pattern: /\bfinally\s*:/g, replacement: '} finally {' },
+  {
+    description: 'except { (brace form) → } catch (Exception e) {',
+    pattern: /\}\s*\n(\s*)except\s*\{/g,
+    replacement: (_m: string, indent: string) => `${indent}} catch (Exception e) {`,
+  },
+  { description: 'finally { (brace form) → } finally {', pattern: /\}\s*\n(\s*)finally\s*\{/g, replacement: (_m: string, indent: string) => `${indent}} finally {` },
   { description: 'raise → throw new RuntimeException', pattern: /\braise\b/g, replacement: 'throw new RuntimeException' },
 
   // f-strings → String.format
@@ -124,7 +132,7 @@ export const javaToPythonRules: TranslationRule[] = [
 
   // Print
   { description: 'System.out.println( → print(', pattern: /System\.out\.println\s*\(/g, replacement: 'print(' },
-  { description: 'System.out.print( → print(end=""', pattern: /System\.out\.print\s*\(/g, replacement: 'print(end=""' },
+  { description: 'System.out.print( → print(x, end="")', pattern: /System\.out\.print\s*\(([^)]*)\)/g, replacement: 'print($1, end="")' },
 
   // String methods
   { description: '.add( → .append(', pattern: /\.add\s*\(/g, replacement: '.append(' },

@@ -16,8 +16,7 @@ export interface TranslationRule {
   /** Human-readable description used in warnings / debug output */
   description: string;
   /**
-   * Pattern to match.  May be a RegExp (applied per-line) or a function that
-   * receives the entire code string and returns the (possibly modified) string.
+   * Pattern to match.  A RegExp applied globally to the code string.
    */
   pattern: RegExp;
   /** Replacement string or function (same semantics as String.prototype.replace) */

@@ -248,25 +248,24 @@ export const pythonToJsRules: TranslationRule[] = [
   },
 
   // Exception handling
+  // Note: convertIndentToBlocks runs before these rules, so Python `except X as e:`
+  // and `finally:` headers have already been converted to brace form (e.g. `except X as e {`).
+  // Patterns match the brace form and also absorb the preceding `}` that closes the try/catch block.
   {
-    description: 'except Exception as e → catch (e)',
-    pattern: /\bexcept\s+(\w+)\s+as\s+(\w+)\s*:/g,
-    replacement: 'catch ($2) {  // $1',
+    description: 'except Exception as e { (brace form) → } catch (e) {  // Exception',
+    pattern: /\}\s*\n(\s*)except\s+(\w+)\s+as\s+(\w+)\s*\{/g,
+    replacement: (_m: string, indent: string, excType: string, excVar: string) =>
+      `${indent}} catch (${excVar}) {  // ${excType}`,
   },
   {
-    description: 'except → catch (e)',
-    pattern: /\bexcept\s*:/g,
-    replacement: 'catch (e) {',
+    description: 'except { (brace form) → } catch (e) {',
+    pattern: /\}\s*\n(\s*)except\s*\{/g,
+    replacement: (_m: string, indent: string) => `${indent}} catch (e) {`,
   },
   {
-    description: 'try: → try {',
-    pattern: /^\s*try\s*:/gm,
-    replacement: (m: string) => m.replace('try:', 'try {'),
-  },
-  {
-    description: 'finally: → } finally {',
-    pattern: /\bfinally\s*:/g,
-    replacement: '} finally {',
+    description: 'finally { (brace form) → } finally {',
+    pattern: /\}\s*\n(\s*)finally\s*\{/g,
+    replacement: (_m: string, indent: string) => `${indent}} finally {`,
   },
   {
     description: 'raise → throw new Error',

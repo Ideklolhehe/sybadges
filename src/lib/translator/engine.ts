@@ -229,9 +229,9 @@ function transformFunctionHeaders(code: string, sourceLang: Language, targetLang
               .filter(Boolean)
               .map((p) => (p.includes(':') ? p : `${p}: unknown`))
               .join(', ');
-            return `${indent}${name}(${typedParams}): unknown {`;
+            return `${indent}function ${name}(${typedParams}): unknown {`;
           }
-          return `${indent}${name}(${cleanParams}) {`;
+          return `${indent}function ${name}(${cleanParams}) {`;
         }
 
         // class X: → class X {

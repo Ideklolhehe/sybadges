@@ -45,10 +45,13 @@ export const pythonToCppRules: TranslationRule[] = [
   { description: 'pass → /* pass */', pattern: /^\s*pass\s*$/gm, replacement: '    /* pass */' },
 
   // Exception handling
-  { description: 'except Exception as e → catch (...)', pattern: /\bexcept\s+\w+\s+as\s+(\w+)\s*:/g, replacement: 'catch (const std::exception& $1) {' },
-  { description: 'except: → catch (...)', pattern: /\bexcept\s*:/g, replacement: 'catch (...) {' },
+  // Note: convertIndentToBlocks runs before these rules, converting `except X as e:`
+  // and `finally:` headers to brace form. Patterns match the brace form and absorb
+  // the preceding `}` that closes the try/catch block.
+  { description: 'except Exception as e { (brace form) → } catch (const std::exception& e) {', pattern: /\}\s*\n(\s*)except\s+\w+\s+as\s+(\w+)\s*\{/g, replacement: (_m: string, indent: string, excVar: string) => `${indent}} catch (const std::exception& ${excVar}) {` },
+  { description: 'except { (brace form) → } catch (...) {', pattern: /\}\s*\n(\s*)except\s*\{/g, replacement: (_m: string, indent: string) => `${indent}} catch (...) {` },
+  { description: 'finally { (brace form) → /* finally: use RAII */ {', pattern: /\}\s*\n(\s*)finally\s*\{/g, replacement: '} /* finally: C++ has no finally; use RAII */ {' },
   { description: 'raise → throw std::runtime_error', pattern: /\braise\b/g, replacement: 'throw std::runtime_error' },
-  { description: 'finally: → /* finally */', pattern: /\bfinally\s*:/g, replacement: '/* finally: C++ has no finally; use RAII */' },
 
   // f-strings → string concatenation placeholder
   {

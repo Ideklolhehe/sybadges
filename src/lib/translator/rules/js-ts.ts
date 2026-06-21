@@ -95,7 +95,7 @@ export const tsToJsRules: TranslationRule[] = [
   // Non-null assertion operator
   {
     description: 'Strip non-null assertion !',
-    pattern: /(\w+)!/g,
+    pattern: /(\w+)!(?!=)/g,
     replacement: '$1',
   },
 ];
