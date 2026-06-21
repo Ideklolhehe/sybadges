@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { useSession, signIn as nextAuthSignIn, signOut as nextAuthSignOut } from 'next-auth/react'
 
 type UserType = 'admin' | 'member' | null
 
@@ -8,60 +9,41 @@ interface AuthContextType {
   isAuthenticated: boolean
   userType: UserType
   userName: string | null
-  signIn: (type: UserType, email: string, password: string) => Promise<void>
+  signIn: (type: UserType, email: string, password: string) => Promise<{ error?: string }>
   signOut: () => void
 }
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined)
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = React.useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      return sessionStorage.getItem('isAuthenticated') === 'true'
-    }
-    return false
-  })
+  const { data: session, status } = useSession()
 
-  const [userType, setUserType] = React.useState<UserType>(() => {
-    if (typeof window !== 'undefined') {
-      const type = sessionStorage.getItem('userType') as UserType
-      return type || null
-    }
-    return null
-  })
-
-  const [userName, setUserName] = React.useState<string | null>(() => {
-    if (typeof window !== 'undefined') {
-      return sessionStorage.getItem('userName') || null
-    }
-    return null
-  })
+  const isAuthenticated = status === 'authenticated'
+  const userType = (session?.user as { role?: string } | undefined)?.role === 'admin'
+    ? 'admin'
+    : (session?.user as { role?: string } | undefined)?.role === 'member'
+      ? 'member'
+      : null
+  const userName = session?.user?.name ?? null
 
   const signIn = async (type: UserType, email: string, password: string) => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        if (typeof window !== 'undefined') {
-          sessionStorage.setItem('isAuthenticated', 'true')
-          sessionStorage.setItem('userType', type)
-          sessionStorage.setItem('userName', email)
-        }
-        setIsAuthenticated(true)
-        setUserType(type)
-        setUserName(email)
-        resolve()
-      }, 500)
+    if (!type) return { error: 'نوع المستخدم غير محدد' }
+
+    const result = await nextAuthSignIn(type, {
+      email,
+      password,
+      redirect: false,
     })
+
+    if (result?.error) {
+      return { error: 'بيانات الدخول غير صحيحة' }
+    }
+
+    return {}
   }
 
   const signOut = () => {
-    if (typeof window !== 'undefined') {
-      sessionStorage.removeItem('isAuthenticated')
-      sessionStorage.removeItem('userType')
-      sessionStorage.removeItem('userName')
-    }
-    setIsAuthenticated(false)
-    setUserType(null)
-    setUserName(null)
+    nextAuthSignOut({ callbackUrl: '/signin' })
   }
 
   return (

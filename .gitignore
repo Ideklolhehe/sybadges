@@ -48,3 +48,7 @@ test
 prompt
 
 server.log
+*.bak
+__pycache__/
+*.tar
+*.pyc

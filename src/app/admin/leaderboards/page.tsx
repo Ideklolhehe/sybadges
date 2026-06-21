@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Trophy, Users, ArrowUp, ArrowDown, Minus } from 'lucide-react'
+import { Trophy, Users } from 'lucide-react'
 
 interface LeaderboardSummary {
   id: string
@@ -10,7 +10,6 @@ interface LeaderboardSummary {
   nameAr: string
   description: string
   descriptionAr: string
-  type: string
   rankingMethod: string
   status: string
   metric?: { name: string; nameAr: string } | null
@@ -25,8 +24,6 @@ interface LeaderboardDetail {
   nameAr: string
   entries: {
     rank: number
-    previousRank: number | null
-    rankChange: number | null
     score: number
     member: { id: string; memberId: string; name: string; photo: string | null; level: string }
   }[]
@@ -108,7 +105,6 @@ export default function AdminLeaderboards() {
         ))}
       </div>
 
-      {/* Selected Leaderboard Detail */}
       {selectedLb && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-gray-800 rounded-2xl p-6 border-2 border-[#2E2973]">
           <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
@@ -128,15 +124,7 @@ export default function AdminLeaderboards() {
                     <p className="text-xs text-gray-500">{entry.member.memberId}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  {entry.rankChange !== null && (
-                    <span className={`flex items-center gap-1 text-xs ${entry.rankChange > 0 ? 'text-green-500' : entry.rankChange < 0 ? 'text-red-500' : 'text-gray-400'}`}>
-                      {entry.rankChange > 0 ? <ArrowUp className="w-3 h-3" /> : entry.rankChange < 0 ? <ArrowDown className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
-                      {Math.abs(entry.rankChange)}
-                    </span>
-                  )}
-                  <span className="font-bold text-[#2E2973] dark:text-blue-400 text-lg">{Math.round(entry.score)}</span>
-                </div>
+                <span className="font-bold text-[#2E2973] dark:text-blue-400 text-lg">{Math.round(entry.score)}</span>
               </div>
             ))}
           </div>

@@ -25,9 +25,9 @@ interface SuccessStory {
   isFeatured: boolean
   category: string
   categoryAr: string
-  center: string
+  centerId: string
   centerAr: string
-  track: string
+  trackId: string
   trackAr: string
   date: string
   member: {
@@ -42,15 +42,16 @@ const mockStories: SuccessStory[] = [
     id: '1',
     contentAr: 'رحلتي مع ناشئة الشارقة كانت رائعة. بدأت كعضو برونزي وعملت بجد للحصول على شارات متعددة واكتشفت شغفي بالقيادة وخدمة المجتمع.',
     titleAr: "رحلتي في ناشئة الشارقة",
-
+    title: 'My Journey in Sharjah Youth',
+    content: 'My journey with Sharjah Youth was wonderful. I started as a bronze member and worked hard to earn multiple badges.',
 
     image: '',
     isFeatured: true,
-    category: 'Leadership',
+    category: 'leadership',
     categoryAr: 'القيادة',
-    center: 'ناشئة وسط',
-    centerAr: 'Wasit Youth Center',
-    track: 'Literature & Languages',
+    centerId: 'wasit',
+    centerAr: 'ناشئة وسط',
+    trackId: 'literature-languages',
     trackAr: 'الآداب واللغات',
     date: '2025-01-15',
     member: {
@@ -67,11 +68,11 @@ const mockStories: SuccessStory[] = [
     contentAr: 'من خلال نظام الشارات، اكتشفت شغفي بالقيادة وخدمة المجتمع، وقادت فرق شبابية متعددة في مشاريع ناجحة.',
     image: '',
     isFeatured: true,
-    category: 'Community',
+    category: 'community',
     categoryAr: 'المجتمع',
-    center: 'ناشئة الذيد',
-    centerAr: 'Al Dhaid Youth Center',
-    track: 'Life Skills',
+    centerId: 'al-dhaid',
+    centerAr: 'ناشئة الذيد',
+    trackId: 'life-skills',
     trackAr: 'المهارات الحياتية',
     date: '2025-01-10',
     member: {
@@ -88,11 +89,11 @@ const mockStories: SuccessStory[] = [
     contentAr: 'شارات الابتكار ألهمتني لخلق حلول مبتكرة لمشاكل بيئية حقيقية في مجتمعي.',
     image: '',
     isFeatured: false,
-    category: 'Innovation',
+    category: 'innovation',
     categoryAr: 'الابتكار',
-    center: 'ناشئة وسط',
-    centerAr: 'Wasit Youth Center',
-    track: 'Science & Technology',
+    centerId: 'wasit',
+    centerAr: 'ناشئة وسط',
+    trackId: 'science-technology',
     trackAr: 'العلوم والتكنولوجيا',
     date: '2025-01-05',
     member: {
@@ -109,11 +110,11 @@ const mockStories: SuccessStory[] = [
     contentAr: 'تطوعت أكثر من 200 ساعة في مساعدة كبار السن ونظمت فعاليات مجتمعية.',
     image: '',
     isFeatured: false,
-    category: 'Community',
+    category: 'community',
     categoryAr: 'المجتمع',
-    center: 'ناشئة مليحة',
-    centerAr: 'Mleiha Youth Center',
-    track: 'Life Skills',
+    centerId: 'mleiha',
+    centerAr: 'ناشئة مليحة',
+    trackId: 'life-skills',
     trackAr: 'المهارات الحياتية',
     date: '2025-01-03',
     member: {
@@ -130,11 +131,11 @@ const mockStories: SuccessStory[] = [
     contentAr: 'أنشأت تطبيقاً لمساعدة الأعضاء على تتبع إنجازاتهم ومشاركة قصص نجاحهم.',
     image: '',
     isFeatured: false,
-    category: 'Technical',
+    category: 'technical',
     categoryAr: 'تقني',
-    center: 'ناشئة كلباء',
-    centerAr: 'Kalba Youth Center',
-    track: 'Science & Technology',
+    centerId: 'kalba',
+    centerAr: 'ناشئة كلباء',
+    trackId: 'science-technology',
     trackAr: 'العلوم والتكنولوجيا',
     date: '2024-12-28',
     member: {
@@ -151,11 +152,11 @@ const mockStories: SuccessStory[] = [
     contentAr: 'نظمت معارض ثقافية وورش فنية للشباب في جميع أنحاء الإمارة.',
     image: '',
     isFeatured: false,
-    category: 'Culture',
+    category: 'culture',
     categoryAr: 'ثقافة',
-    center: 'ناشئة وسط',
-    centerAr: 'Wasit Youth Center',
-    track: 'Arts',
+    centerId: 'wasit',
+    centerAr: 'ناشئة وسط',
+    trackId: 'arts',
     trackAr: 'الفنون',
     date: '2024-12-25',
     member: {
@@ -214,8 +215,8 @@ export default function YouthAchievementPortal() {
       story.titleAr.toLowerCase().includes(searchTerm.toLowerCase()) ||
       story.member.name.toLowerCase().includes(searchTerm.toLowerCase())
     
-    const matchesCenter = filterCenter === 'all' || story.center === filterCenter
-    const matchesTrack = filterTrack === 'all' || story.track === filterTrack
+    const matchesCenter = filterCenter === 'all' || story.centerId === filterCenter
+    const matchesTrack = filterTrack === 'all' || story.trackId === filterTrack
     
     return matchesSearch && matchesCenter && matchesTrack
   })

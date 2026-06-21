@@ -2,45 +2,20 @@ import { db } from '@/lib/db';
 import { recordEvent } from './event-store';
 
 /**
- * Points system with triggers, levels, and boosts.
+ * Points system with triggers and levels.
  * Points are awarded via triggers that fire on metric events or achievement completions.
  */
-
-/**
- * Get active boost multiplier for a points config.
- */
-async function getActiveBoostMultiplier(pointsConfigId: string): Promise<number> {
-  const now = new Date();
-  const activeBoosts = await db.pointsBoost.findMany({
-    where: {
-      pointsConfigId,
-      isActive: true,
-      startDate: { lte: now },
-      endDate: { gte: now },
-    },
-  });
-
-  if (activeBoosts.length === 0) return 1;
-
-  // If multiple boosts are active, use the highest multiplier
-  return Math.max(...activeBoosts.map((b) => b.multiplier));
-}
 
 /**
  * Award points to a member and recalculate their level.
  */
 async function awardPoints(memberId: string, pointsConfigId: string, basePoints: number): Promise<number> {
-  const multiplier = await getActiveBoostMultiplier(pointsConfigId);
-  const actualPoints = basePoints * multiplier;
-
-  // Upsert member points
   const memberPoints = await db.memberPoints.upsert({
     where: { memberId_pointsConfigId: { memberId, pointsConfigId } },
-    update: { totalPoints: { increment: actualPoints } },
-    create: { memberId, pointsConfigId, totalPoints: actualPoints },
+    update: { totalPoints: { increment: basePoints } },
+    create: { memberId, pointsConfigId, totalPoints: basePoints },
   });
 
-  // Recalculate level
   const levels = await db.pointsLevel.findMany({
     where: { pointsConfigId },
     orderBy: { order: 'desc' },
@@ -74,18 +49,15 @@ async function awardPoints(memberId: string, pointsConfigId: string, basePoints:
     payload: {
       pointsConfigId,
       basePoints,
-      multiplier,
-      actualPoints,
       totalPoints: memberPoints.totalPoints,
     },
   });
 
-  return actualPoints;
+  return basePoints;
 }
 
 /**
  * Process points triggers when a metric event is recorded.
- * Called from metrics.ts.
  */
 export async function processMetricTriggers(
   memberId: string,
@@ -95,11 +67,7 @@ export async function processMetricTriggers(
   let totalPointsAwarded = 0;
 
   const triggers = await db.pointsTrigger.findMany({
-    where: {
-      sourceType: 'metric',
-      metricId,
-      isActive: true,
-    },
+    where: { sourceType: 'metric', metricId, isActive: true },
     include: { pointsConfig: true },
   });
 
@@ -118,7 +86,6 @@ export async function processMetricTriggers(
 
 /**
  * Process points triggers when an achievement is completed.
- * Called from achievements.ts.
  */
 export async function processAchievementTriggers(
   memberId: string,
@@ -127,11 +94,7 @@ export async function processAchievementTriggers(
   let totalPointsAwarded = 0;
 
   const triggers = await db.pointsTrigger.findMany({
-    where: {
-      sourceType: 'achievement',
-      badgeId,
-      isActive: true,
-    },
+    where: { sourceType: 'achievement', badgeId, isActive: true },
     include: { pointsConfig: true },
   });
 
@@ -195,9 +158,6 @@ export async function getPointsSummary() {
         take: 10,
         include: { member: true },
       },
-      boosts: {
-        where: { isActive: true },
-      },
     },
   });
 
@@ -211,12 +171,6 @@ export async function getPointsSummary() {
       memberName: mp.member.name,
       totalPoints: mp.totalPoints,
       currentLevel: mp.currentLevel,
-    })),
-    activeBoosts: config.boosts.map((b) => ({
-      id: b.id,
-      name: b.name,
-      multiplier: b.multiplier,
-      endDate: b.endDate,
     })),
   }));
 }

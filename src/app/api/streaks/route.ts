@@ -27,7 +27,6 @@ export async function POST(request: NextRequest) {
     const {
       name, nameAr, description, descriptionAr,
       frequency, threshold, metricId,
-      initialFreezes, freezeAccrualRate, freezeAccrualDays, maxFreezes,
     } = body;
 
     if (!name || !nameAr || !metricId) {
@@ -46,10 +45,6 @@ export async function POST(request: NextRequest) {
         frequency: frequency ?? 'daily',
         threshold: threshold ?? 1,
         metricId,
-        initialFreezes: initialFreezes ?? 0,
-        freezeAccrualRate: freezeAccrualRate ?? 0,
-        freezeAccrualDays: freezeAccrualDays ?? 7,
-        maxFreezes: maxFreezes ?? 10,
       },
       include: { metric: true },
     });
