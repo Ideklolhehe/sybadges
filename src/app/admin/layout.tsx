@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Shield, Users, Award, BarChart3, Settings, ChevronRight, ChevronLeft, X, Activity, Flame, Star, Trophy } from 'lucide-react'
+
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useRouter } from 'next/navigation'
@@ -62,6 +62,7 @@ const navItems = [
     labelEn: 'Leaderboards'
   },
   {
+
     href: '/admin/settings',
     icon: Settings,
     label: 'الإعدادات',
@@ -117,7 +118,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         }`}
       >
         <nav className="p-4 space-y-2">
-          {navItems.map((item) => {
+          {navItems
+            .filter((item) => !item.devOnly || process.env.NEXT_PUBLIC_ENABLE_CODE_TRANSLATOR === 'true')
+            .map((item) => {
             const isActive = pathname === item.href
             const Icon = item.icon
             return (
